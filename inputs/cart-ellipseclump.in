@@ -1,0 +1,16 @@
+200,100,100		! mesh size (x,y)
+a		 	! runid letter
+24e20,12e20,12e20 	! physical size of grid (cm,cm)
+0.01            	! density of environment (cm^-3)
+1.5e7           	! temperature of environment (K)
+3700.           	! shock velocity (km/s)
+10.             	! density of cloud (cm^-3)
+1.5e4           	! temperature of cloud (K)
+8e20,6e20,6e20      	! position of centre of cloud (cm,cm)
+3.0e20            	! first axis length
+2.5e20            	! second axis length
+2.5e20			! third axis length
+40.0            	! position angle 1
+0.0	            	! position angle 2
+5e11	            	! time between outputs (s)
+100	              	! number of outputs

@@ -1,0 +1,452 @@
+module boundary
+
+  ! Module for Capreole
+  ! Author: Garrelt Mellema
+  ! Date: 2004-05-11
+  !
+  ! This module contains the routines related with handling the grid
+  ! boundaries. This is mostly the internal boundaries.
+
+  use precision
+  use scaling
+  use my_mpi
+  use sizes
+  use mesh
+  use grid
+  use geometry
+  use hydro
+  use atomic
+
+  implicit none
+
+contains
+
+  !=======================================================================
+
+  subroutine exchngxy (newold)
+    
+    ! This routine exchanges boundary cells between neighbours
+    ! extend of boundary: mbc
+
+    integer,intent(in) :: newold
+
+#ifdef MPI
+    real(kind=dp),dimension(mbc,1-mbc:ey-sy+1+mbc,1-mbc:ez-sz+1+mbc,neq) :: &
+         xplane1
+    real(kind=dp),dimension(mbc,1-mbc:ey-sy+1+mbc,1-mbc:ez-sz+1+mbc,neq) :: &
+         xplane2
+    real(kind=dp),dimension(mbc,1-mbc:ey-sy+1+mbc,1-mbc:ez-sz+1+mbc,neq) :: &
+         xplane3
+    real(kind=dp),dimension(mbc,1-mbc:ey-sy+1+mbc,1-mbc:ez-sz+1+mbc,neq) :: &
+         xplane4
+
+    real(kind=dp),dimension(1-mbc:ex-sx+1+mbc,mbc,1-mbc:ez-sz+1+mbc,neq) :: &
+         yplane1
+    real(kind=dp),dimension(1-mbc:ex-sx+1+mbc,mbc,1-mbc:ez-sz+1+mbc,neq) :: &
+         yplane2
+    real(kind=dp),dimension(1-mbc:ex-sx+1+mbc,mbc,1-mbc:ez-sz+1+mbc,neq) :: &
+         yplane3
+    real(kind=dp),dimension(1-mbc:ex-sx+1+mbc,mbc,1-mbc:ez-sz+1+mbc,neq) :: &
+         yplane4
+
+    real(kind=dp),dimension(1-mbc:ex-sx+1+mbc,1-mbc:ey-sy+1+mbc,mbc,neq) :: &
+         zplane1
+    real(kind=dp),dimension(1-mbc:ex-sx+1+mbc,1-mbc:ey-sy+1+mbc,mbc,neq) :: &
+         zplane2
+    real(kind=dp),dimension(1-mbc:ex-sx+1+mbc,1-mbc:ey-sy+1+mbc,mbc,neq) :: &
+         zplane3
+    real(kind=dp),dimension(1-mbc:ex-sx+1+mbc,1-mbc:ey-sy+1+mbc,mbc,neq) :: &
+         zplane4
+
+    integer :: status(MPI_STATUS_SIZE)
+    integer :: i,j,k,ieq
+    
+    integer :: sizex,sizey,sizez
+
+    integer,parameter :: xfromright=101,xfromleft=102  ! tags
+    integer ::  request1,request2
+    integer,parameter ::  yfromdown=201,yfromup=202  ! tags
+    integer ::  request3,request4
+    integer,parameter ::  zfrombelow=301,zfromabove=302  ! tags
+    integer ::  request5,request6
+#endif
+
+    integer :: ierror
+
+    ! Point state to appropriate array
+    state=set_state_pointer(newold)
+
+    ! Account for non-existing neighbours, these are real boundaries
+    ! the [inner,outer][x,y]bound routines need to be supplied
+
+    if (nbrleft == MPI_PROC_NULL) call innerxbound(newold )
+    if (nbrright == MPI_PROC_NULL) call outerxbound(newold )
+    if (nbrdown == MPI_PROC_NULL) call innerybound(newold )
+    if (nbrup == MPI_PROC_NULL)   call outerybound(newold )
+    if (nbrbelow == MPI_PROC_NULL) call innerzbound(newold )
+    if (nbrabove == MPI_PROC_NULL)   call outerzbound(newold )
+
+#ifdef MPI
+    ! Sizes in x and y direction
+
+    sizex=ex-sx+1
+    sizey=ey-sy+1
+    sizez=ez-sz+1
+    
+    ! Exchange mbc wide yrows with left and right neighbours
+
+    do ieq=1,neq   ! put planes to be sent in array
+       do k=sz-mbc,ez+mbc
+          do j=sy-mbc,ey+mbc
+             do i=sx,sx+mbc-1
+                xplane1(i-sx+1,j-sy+1,k-sz+1,ieq)=state(i,j,k,ieq)
+             enddo
+             do i=ex-mbc+1,ex
+                xplane2(i-ex+mbc,j-sy+1,k-sz+1,ieq)=state(i,j,k,ieq)
+             enddo
+          enddo
+       enddo
+    enddo
+
+    ! SendReceive planes to left and right neighbours 
+
+    call MPI_SENDRECV( &
+         xplane1,mbc*(sizey+2*mbc)*(sizez+2*mbc)*neq, &
+         MPI_DOUBLE_PRECISION,nbrleft,xfromright, &
+         xplane4,mbc*(sizey+2*mbc)*(sizez+2*mbc)*neq, &
+         MPI_DOUBLE_PRECISION,nbrright,xfromright, &
+         MPI_COMM_NEW,status,ierror)
+
+    call MPI_SENDRECV( &
+         xplane2,mbc*(sizey+2*mbc)*(sizez+2*mbc)*neq, &
+         MPI_DOUBLE_PRECISION,nbrright,xfromleft, &
+         xplane3,mbc*(sizey+2*mbc)*(sizez+2*mbc)*neq, & 
+         MPI_DOUBLE_PRECISION,nbrleft,xfromleft, &
+         MPI_COMM_NEW,status,ierror)
+      
+    ! Fill the boundaries with the received planes
+
+    if (nbrleft /= MPI_PROC_NULL) then
+       do ieq=1,neq
+          do k=sz-mbc,ez+mbc
+             do j=sy-mbc,ey+mbc
+                do i=sx-mbc,sx-1
+                   state(i,j,k,ieq)=xplane3(i-sx+mbc+1,j-sy+1,k-sz+1,ieq)
+                enddo
+             enddo
+          enddo
+       enddo
+    endif
+    if (nbrright /= MPI_PROC_NULL) then
+       do ieq=1,neq
+          do k=sz-mbc,ez+mbc
+             do j=sy-mbc,ey+mbc
+                do i=ex+1,ex+mbc
+                   state(i,j,k,ieq)=xplane4(i-ex,j-sy+1,k-sz+1,ieq)
+                enddo
+             enddo
+          enddo
+       enddo
+    endif
+    
+    ! Wait for the sends to be completed
+    call MPI_BARRIER(MPI_COMM_NEW,ierror)
+
+    ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+    ! Y 
+    ! Exchange mbc thick y-planes with the neighbours
+
+    do ieq=1,neq    ! put planes to be sent in array
+       do k=sz-mbc,ez+mbc
+          do i=sx-mbc,ex+mbc
+             do j=sy,sy+mbc-1
+                yplane1(i-sx+1,j-sy+1,k-sz+1,ieq)=state(i,j,k,ieq)
+             enddo
+             do j=ey-mbc+1,ey
+                yplane2(i-sx+1,j-ey+mbc,k-sz+1,ieq)=state(i,j,k,ieq)
+             enddo
+          enddo
+       enddo
+    enddo
+    
+    ! SendReceive planes to down and up neighbours
+
+    call MPI_SENDRECV( &
+         yplane1,(sizex+2*mbc)*(sizez+2*mbc)*mbc*neq, &
+         MPI_DOUBLE_PRECISION,nbrdown,yfromup,  &
+         yplane4,(sizex+2*mbc)*(sizez+2*mbc)*mbc*neq, &
+         MPI_DOUBLE_PRECISION,nbrup,yfromup, &
+         MPI_COMM_NEW,status,ierror)
+          
+    call MPI_SENDRECV( &
+         yplane2,(sizex+2*mbc)*(sizez+2*mbc)*mbc*neq, &
+         MPI_DOUBLE_PRECISION,nbrup,yfromdown,   &
+         yplane3,(sizex+2*mbc)*(sizez+2*mbc)*mbc*neq, &
+         MPI_DOUBLE_PRECISION,nbrdown,yfromdown, &
+         MPI_COMM_NEW,status,ierror)
+      
+    ! Fill the boundaries with the received planes
+
+    if (nbrdown /= MPI_PROC_NULL) then
+       do ieq=1,neq
+          do k=sz-mbc,ez+mbc
+             do j=sy-mbc,sy-1
+                do i=sx-mbc,ex+mbc
+                   state(i,j,k,ieq)=yplane3(i-sx+1,j-sy+mbc+1,k-sz+1,ieq)
+                enddo
+             enddo
+          enddo
+       enddo
+    endif
+    if (nbrup /= MPI_PROC_NULL) then
+       do ieq=1,neq
+          do k=sz-mbc,ez+mbc
+             do j=ey+1,ey+mbc
+                do i=sx-mbc,ex+mbc
+                   state(i,j,k,ieq)=yplane4(i-sx+1,j-ey,k-sz+1,ieq)
+                enddo
+             enddo
+          enddo
+       enddo
+    endif
+    
+    ! Wait for the sends to be completed
+    
+    call MPI_BARRIER(MPI_COMM_NEW,ierror)
+
+    ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+    ! Z
+    ! Exchange z-planes with the neighbours
+
+    do ieq=1,neq    ! put planes to be sent in array
+       do j=sy-mbc,ey+mbc
+          do i=sx-mbc,ex+mbc
+             do k=sz,sz+mbc-1
+                zplane1(i-sx+1,j-sy+1,k-sz+1,ieq)=state(i,j,k,ieq)
+             enddo
+             do k=ez-mbc+1,ez
+                zplane2(i-sx+1,j-sy+1,k-ez+mbc,ieq)=state(i,j,k,ieq)
+             enddo
+          enddo
+       enddo
+    enddo
+    
+    ! SendReceive planes to down and above neighbours
+
+    call MPI_SENDRECV( &
+         zplane1,(sizex+2*mbc)*(sizey+2*mbc)*mbc*neq, &
+         MPI_DOUBLE_PRECISION,nbrbelow,zfromabove,  &
+         zplane3,(sizex+2*mbc)*(sizey+2*mbc)*mbc*neq, &
+         MPI_DOUBLE_PRECISION,nbrbelow,zfrombelow, &
+         MPI_COMM_NEW,status,ierror)
+
+    call MPI_SENDRECV( &
+         zplane2,(sizex+2*mbc)*(sizey+2*mbc)*mbc*neq, &
+         MPI_DOUBLE_PRECISION,nbrabove,zfrombelow,   &
+         zplane4,(sizex+2*mbc)*(sizey+2*mbc)*mbc*neq, &
+         MPI_DOUBLE_PRECISION,nbrabove,zfromabove, &
+         MPI_COMM_NEW,status,ierror)
+
+    ! Fill the boundaries with the received planes
+
+    if (nbrbelow /= MPI_PROC_NULL) then
+       do ieq=1,neq
+          do k=sz-mbc,sz-1
+             do j=sy-mbc,ey+mbc
+                do i=sx-mbc,ex+mbc
+                   state(i,j,k,ieq)=zplane3(i-sx+1,j-sy+1,k-sz+mbc+1,ieq)
+                enddo
+             enddo
+          enddo
+       enddo
+    endif
+    if (nbrabove /= MPI_PROC_NULL) then
+       do ieq=1,neq
+          do k=ez+1,ez+mbc
+             do j=sy-mbc,ey+mbc
+                do i=sx-mbc,ex+mbc
+                   state(i,j,k,ieq)=zplane4(i-sx+1,j-sy+1,k-ez,ieq)
+                enddo
+             enddo
+          enddo
+       enddo
+    endif
+    
+    ! Wait for the sends to be completed
+    
+    call MPI_BARRIER(MPI_COMM_NEW,ierror)
+#endif
+
+    ! Calculate the pressure in the newly set boundary cells
+    ! the presfunc routine has to be supplied
+
+    call presfunc(sx-mbc,ex+mbc,sy-mbc,ey+mbc,sz-mbc,ez+mbc,newold,ierror)
+    !! call presfunc(ex+1,ex+mbc,sy-1,ey+1,0)
+    !! call presfunc(sx-1,ex+1,sy-mbc,sy-1,0)
+    !! call presfunc(sx-1,ex+1,ey+1,ey+mbc,0)
+
+  end subroutine exchngxy
+
+  !==========================================================================
+
+  subroutine innerxbound (newold)
+    
+    ! This routine resets the inner x boundary
+    
+    integer :: i,j,k,ieq
+    
+    integer,intent(in) :: newold
+
+    state=set_state_pointer(newold)
+
+    do ieq=1,neq
+       do k=sz-mbc,ez+mbc
+          do j=sy-mbc,ey+mbc
+             do i=sx-mbc,sx-1
+!          state(i,j,1)=state(2*sx-1-i,j,1)
+!          state(i,j,2)=-state(2*sx-1-i,j,2)
+!          state(i,j,neuler-1:neq)=state(2*sx-1-i,j,neuler-1:neq)
+                state(i,j,k,ieq)=state(sx,j,k,ieq)
+             enddo
+          enddo
+       enddo
+    enddo
+!    do j=sy-mbc,ey+mbc
+!       do i=sx-mbc,sx-1
+!       enddo
+!    enddo
+    
+  end subroutine innerxbound
+
+  !==========================================================================
+
+  subroutine outerxbound (newold)
+
+    ! This routine resets the outer x boundary
+
+    integer :: i,j,k,ieq
+    
+    integer,intent(in) :: newold
+
+    state=set_state_pointer(newold)
+
+    do ieq=1,neq
+       do k=sz-mbc,ez+mbc
+          do j=sy-mbc,ey+mbc
+             do i=ex+1,ex+mbc
+                state(i,j,k,ieq)=state(ex,j,k,ieq)
+             enddo
+          enddo
+       enddo
+    enddo
+
+  end subroutine outerxbound
+
+  !==========================================================================
+
+  subroutine innerybound (newold)
+
+    ! This routine resets the inner y boundary
+
+    integer :: i,j,k,ieq
+
+    integer,intent(in) :: newold
+
+    state=set_state_pointer(newold)
+
+    do ieq=1,neq
+       do k=sz-mbc,ez+mbc
+          do j=sy-mbc,sy-1
+             do i=sx-mbc,ex+mbc
+                !          state(i,j,1)=state(i,2*sy-1-j,1)
+                !          state(i,j,2)=state(i,2*sy-1-j,2)
+                !          state(i,j,3)=-state(i,2*sy-1-j,3)
+                !          state(i,j,neuler:neq)=state(i,2*sy-1-j,neuler:neq)
+                state(i,j,k,ieq)=state(i,sy,k,ieq)
+             enddo
+          enddo
+       enddo
+    enddo
+    !    do i=sx-mbc,ex+mbc
+    !       do j=sy-mbc,sy-1
+    !       enddo
+    !    enddo
+    
+  end subroutine innerybound
+
+  !==========================================================================
+
+  subroutine outerybound (newold)
+
+    ! This routine resets the outer y boundary
+
+    integer :: i,j,k,ieq
+
+    integer,intent(in) :: newold
+
+    state=set_state_pointer(newold)
+
+    do ieq=1,neq
+       do k=sz-mbc,ez+mbc
+          do j=ey+1,ey+mbc
+             do i=sx-mbc,ex+mbc
+                state(i,j,k,ieq)=state(i,ey,k,ieq)
+             enddo
+          enddo
+       enddo
+    enddo
+    
+  end subroutine outerybound
+
+  !==========================================================================
+
+  subroutine innerzbound (newold)
+
+    ! This routine resets the inner z boundary
+
+    integer,intent(in) :: newold
+    
+    integer :: i,j,k,ieq
+
+    state=set_state_pointer(newold)
+
+    do ieq=1,neq
+       do k=sz-mbc,sz-1
+          do j=sy-mbc,ey+mbc
+             do i=sx-mbc,ex+mbc
+                state(i,j,k,ieq)=state(i,k,sz,ieq)
+             enddo
+          enddo
+       enddo
+    enddo
+
+  end subroutine innerzbound
+
+  !==========================================================================
+
+  subroutine outerzbound (newold)
+
+    ! This routine resets the outer y boundary
+
+    integer,intent(in) :: newold
+
+    integer :: i,j,k,ieq
+
+    state=set_state_pointer(newold)
+
+    do ieq=1,neq
+       do k=ez+1,ez+mbc
+          do j=sy-mbc,ey+mbc
+             do i=sx-mbc,ex+mbc
+                state(i,j,k,ieq)=state(i,j,ez,ieq)
+             enddo
+          enddo
+       enddo
+    enddo
+    
+  end subroutine outerzbound
+
+
+end module boundary
