@@ -28,7 +28,7 @@ module cgsconstants
   ! Scaling factor
   ! this scaling parameter is independent of the main program scaling
   ! (see scaling.f90), and is only used in the radiation physics subroutines
-  real(kind=8),parameter  :: sclfre=1.0d15
+  real(kind=8),parameter  :: sclfre=1.0 !d15
   ! conversion between evs and frequency
   real(kind=8),parameter  :: ev2fr=0.241838d15/sclfre
   ! h/k, Planck/Boltzm

@@ -22,11 +22,12 @@ module problem
   use scaling
   use atomic
   use cgsconstants
+  use abundances, only: mu
   use mesh
   use grid
   use hydro
   use boundary
-!  use ionic
+  use ionic
 
   implicit none
 
@@ -56,7 +57,7 @@ contains
     real(kind=dp)    :: xc,yc,zc,xr1,yr1,xr2,zr2
 
     integer :: i,j,k,nitt,ieq
-    !real(kind=dp)    :: r_interface ! dummy needed for calling init_ionic
+    real(kind=dp)    :: r_interface ! dummy needed for calling init_ionic
 
 #ifdef MPI       
     integer :: ierror
@@ -147,8 +148,8 @@ contains
        ! Scale physical parameters
 
        vblast=vblast*1d5/scvelo ! vblast is in km/s, not cm/s
-       edensity=m_p*edensity/scdens ! densities are in cm^-3, 
-       wdensity=m_p*wdensity/scdens ! 
+       edensity=mu*m_p*edensity/scdens ! densities are in cm^-3, 
+       wdensity=mu*m_p*wdensity/scdens ! 
        
        ! Calculate the pressures
        
@@ -220,7 +221,7 @@ contains
                         0.5d0*(state(i,j,k,RHVX)*state(i,j,k,RHVX)+ &
                         state(i,j,k,RHVY)*state(i,j,k,RHVY)+ &
                         state(i,j,k,RHVZ)*state(i,j,k,RHVZ))/state(i,j,k,RHO)
-                   state(i,j,k,EN+1)=1.234d0
+                   state(i,j,k,TRACER1)=1.0d0
                 else
                    state(i,j,k,RHO)=edensity
                    state(i,j,k,RHVX)=0.0d0
@@ -231,7 +232,7 @@ contains
                         0.5d0*(state(i,j,k,RHVX)*state(i,j,k,RHVX)+ &
                         state(i,j,k,RHVY)*state(i,j,k,RHVY)+ &
                         state(i,j,k,RHVZ)*state(i,j,k,RHVZ))/state(i,j,k,RHO)
-                   state(i,j,k,EN+1)=1.234d0
+                   state(i,j,k,TRACER1)=-1.0d0
                 endif
              enddo
           enddo
@@ -297,14 +298,14 @@ contains
                         0.5d0*(state(i,j,k,RHVX)*state(i,j,k,RHVX)+ &
                         state(i,j,k,RHVY)*state(i,j,k,RHVY)+ &
                         state(i,j,k,RHVZ)*state(i,j,k,RHVZ))/state(i,j,k,RHO)
-                   state(i,j,k,EN+1)=-1.0d0
+                   state(i,j,k,TRACER1)=-1.0d0
                 endif
              enddo
           enddo
        enddo
        
        ! Initialize the ionic concentrations
-       !call init_ionic(state,r_interface)
+       call init_ionic(restart,r_interface)
 
        ! Record variables which remain constant during a run in a file
        ! runparams to be used at restarts
@@ -358,7 +359,7 @@ contains
                         0.5d0*(state(i,j,k,RHVX)*state(i,j,k,RHVX)+ &
                         state(i,j,k,RHVY)*state(i,j,k,RHVY)+ &
                         state(i,j,k,RHVZ)*state(i,j,k,RHVZ))/state(i,j,k,RHO)
-                state(i,j,k,EN+1)=-1.0d0
+                state(i,j,k,TRACER1)=-1.0d0
              enddo
           enddo
        enddo

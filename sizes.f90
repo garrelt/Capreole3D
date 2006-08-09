@@ -13,7 +13,7 @@ module sizes
   integer,public,parameter :: nrOfDim=3        ! number of dimensions
   integer,public,parameter :: mbc=2            ! number of ghost cells
   integer,public,parameter :: neuler=2+NrOfDim ! number of Euler equations
-  integer,public,parameter :: neq=neuler+1     ! number of equations (Euler +
+  integer,public,parameter :: neq=neuler+3     ! number of equations (Euler +
                                                !   advected quantities)
   ! Indices of state array
   integer,public,parameter :: RHO=1
@@ -21,6 +21,9 @@ module sizes
   integer,public,parameter :: RHVY=3
   integer,public,parameter :: RHVZ=4
   integer,public,parameter :: EN=5
+  integer,public,parameter :: TRACER1=6
+  integer,public,parameter :: XHI=7
+  integer,public,parameter :: XHII=8
 
   ! The following define constants for identifying the coordinate system
   integer,public,parameter :: CART =1
