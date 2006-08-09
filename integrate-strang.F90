@@ -116,10 +116,10 @@ contains
     enddo
 
     if (istop == 0) then ! otherwise serious error occurred
-       !!call rad_evolve3D( )
+       call rad_evolve3D( )
        ! exchange boundaries with neighbours
        ! This routine also calculates the new pressure
-       !!call exchngxy(NEW)
+       call exchngxy(NEW)
     endif
 
   end subroutine integrate
