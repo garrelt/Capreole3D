@@ -74,7 +74,7 @@ contains
     integer :: ierror
 
     ! Point state to appropriate array
-    state=set_state_pointer(newold)
+    state => set_state_pointer(newold)
 
     ! Account for non-existing neighbours, these are real boundaries
     ! the [inner,outer][x,y]bound routines need to be supplied
@@ -299,7 +299,7 @@ contains
     
     integer,intent(in) :: newold
 
-    state=set_state_pointer(newold)
+    state => set_state_pointer(newold)
 
     do ieq=1,neq
        do k=sz-mbc,ez+mbc
@@ -330,7 +330,7 @@ contains
     
     integer,intent(in) :: newold
 
-    state=set_state_pointer(newold)
+    state => set_state_pointer(newold)
 
     do ieq=1,neq
        do k=sz-mbc,ez+mbc
@@ -354,7 +354,7 @@ contains
 
     integer,intent(in) :: newold
 
-    state=set_state_pointer(newold)
+    state => set_state_pointer(newold)
 
     do ieq=1,neq
        do k=sz-mbc,ez+mbc
@@ -386,7 +386,7 @@ contains
 
     integer,intent(in) :: newold
 
-    state=set_state_pointer(newold)
+    state => set_state_pointer(newold)
 
     do ieq=1,neq
        do k=sz-mbc,ez+mbc
@@ -410,13 +410,13 @@ contains
     
     integer :: i,j,k,ieq
 
-    state=set_state_pointer(newold)
+    state => set_state_pointer(newold)
 
     do ieq=1,neq
        do k=sz-mbc,sz-1
           do j=sy-mbc,ey+mbc
              do i=sx-mbc,ex+mbc
-                state(i,j,k,ieq)=state(i,k,sz,ieq)
+                state(i,j,k,ieq)=state(i,j,sz,ieq)
              enddo
           enddo
        enddo
@@ -434,7 +434,7 @@ contains
 
     integer :: i,j,k,ieq
 
-    state=set_state_pointer(newold)
+    state => set_state_pointer(newold)
 
     do ieq=1,neq
        do k=ez+1,ez+mbc

@@ -19,14 +19,17 @@ module grid
   !              volx, voly, volz
   ! 2005-04-20 - adapted for 3D
   
+  use file_admin, only: stdinput
   use precision
   use scaling
   use sizes
   use my_mpi
   use mesh
+  use string_manipulation
+  use astroconstants
 
+  implicit none
   private
-  !implicit none
 
   ! Identify type of coordinate system
   integer,parameter,public :: coordsys=CART
@@ -84,28 +87,58 @@ contains
     
     logical,intent(in) :: restart
 
-    integer :: i,j,k,ierror
+    integer :: i,j,k
+    character(len=10) :: str_length_unit
+    real(kind=dp) :: conversion_factor
+
+#ifdef MPI
+    integer :: ierror
+#endif
 
     if (.not.restart) then ! Fresh start
        
        ! Ask for the input if you are processor 0.
        
        if (rank == 0) then
-          write (unit=*,fmt="(a)",advance="no") "2) Size of grid box (cm): "
-          read (unit=*,fmt=*) xlength,ylength,zlength
-          write (unit=30,fmt="(a,2(es10.3))") "2) Size of grid box(cm): ", &
-               xlength,ylength,zlength
+          write (unit=*,fmt="(a)",advance="no") &
+               "2) Size of grid box (specify units): "
+          read (unit=stdinput,fmt=*) xlength,ylength,zlength,str_length_unit
+          write (unit=30,fmt="(a,3(e10.3),a)") "2) Size of grid box : ", &
+               xlength,ylength,zlength,str_length_unit
           ! Record variables which remain constant during a run in a file
           ! runparams to be used at restarts
           open(unit=80,file="runparams",status="unknown",form="unformatted",&
                action="write")
           write(unit=80) xlength,ylength,zlength
+          ! Convert to cms
+          call convert_case(str_length_unit,0) ! conversion to lower case
+          select case (trim(adjustl(str_length_unit)))
+          case ('cm','centimeter','cms','centimeters')
+             conversion_factor=1.0
+          case ('m','meter','ms','meters')
+             conversion_factor=100.0
+          case ('km','kilometer','kms','kilometers','clicks')
+             conversion_factor=1000.0
+          case ('pc','parsec','parsecs')
+             conversion_factor=pc
+          case ('kpc','kiloparsec','kiloparsecs')
+             conversion_factor=kpc
+          case ('mpc','megaparsec','megaparsecs')
+             conversion_factor=Mpc
+          case default
+             write(*,*) 'Length unit not recognized, assuming cm'
+             conversion_factor=1.0
+          end select
+          xlength=xlength*conversion_factor
+          ylength=ylength*conversion_factor
+          zlength=zlength*conversion_factor
        endif
     else
        open(unit=80,file="runparams",status="old",form="unformatted", &
             action="write")
        read(unit=80) xlength,ylength,zlength
     endif
+
 
 #ifdef MPI
     ! Distribute the input parameters to the other nodes

@@ -189,18 +189,16 @@ contains
                                         ! V2,V3: perpendicular direction
     integer,intent(out) :: ierror ! control integer
 
-    integer :: isb ! upwind integer position
-    
-    integer :: i,ieq,itrans,mw,ii
-    real(kind=dp) :: dtdx,dtdy
+    integer :: i,ieq,mw
+    real(kind=dp) :: dtdx!,dtdy
 
     ! smooth transition through zero characteristics
-    real(kind=dp) :: fctr
+    !real(kind=dp) :: fctr
     ! steepness of transition function
     !real(kind=dp),dimension(nwaves) :: beta= (/ 1d4, 1d4, 1d4, 1d4 /)
 
-    real(kind=dp) :: rhol,rhor,ul,ur
-    real(kind=dp),dimension(2-mbc:mesh+mbc)   :: utadv
+    !real(kind=dp) :: rhol,rhor,ul,ur
+    !real(kind=dp),dimension(2-mbc:mesh+mbc)   :: utadv
 
     integer :: ipres_error
     

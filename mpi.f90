@@ -17,9 +17,11 @@ module my_mpi
 
   ! This is the system module:
   !!include '/beosoft/mpich/include/mpif.h'        ! necessary for MPI
-  use mpi
+  !use mpi
 
   implicit none
+
+  include 'mpif.h'
 
   integer,parameter,public :: NPDIM=3 ! dimension of problem
 

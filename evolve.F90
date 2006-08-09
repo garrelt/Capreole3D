@@ -31,12 +31,15 @@ contains
     
     ! This routine handles the basic integration frame work
 
-    integer :: nstep,i,j,ieq,ierror,inegative,istop ! various control
+    integer :: nstep,inegative,istop ! various control
                                                     !   integers
     real(kind=dp)    :: dtlocal    ! processor local time step
     real(kind=dp)    :: nexttime   ! timer for output
-    integer :: nframe,nout         ! integers for output
-    
+    integer :: nframe              ! integers for output
+#ifdef MPI
+    integer :: ierror
+#endif
+
     !--------------------------------------------------------------------------
 
     ! Report initial conditions

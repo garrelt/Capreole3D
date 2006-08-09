@@ -15,6 +15,7 @@ module problem
   ! This version: steady shock interacting with elliptical cloud
   !  (cartesian coordinates).
 
+  use file_admin, only: stdinput
   use precision, only: dp
   use my_mpi
   use sizes
@@ -54,8 +55,12 @@ contains
     real(kind=dp)    :: epressr,wpressr,vs1,xm1,fp,shckdist
     real(kind=dp)    :: xc,yc,zc,xr1,yr1,xr2,zr2
 
-    integer :: i,j,k,ierror,nitt,ieq
-    real(kind=dp)    :: r_interface ! dummy needed for calling init_ionic
+    integer :: i,j,k,nitt,ieq
+    !real(kind=dp)    :: r_interface ! dummy needed for calling init_ionic
+
+#ifdef MPI       
+    integer :: ierror
+#endif
 
     if (.not.restart) then ! Fresh start
        
@@ -63,29 +68,29 @@ contains
        if (rank == 0) then
           write (*,'(//,A,/)') '----- Environment -----'
           write (*,'(A,$)') '1) Density (cm^-3): '
-          read (*,*) edensity
+          read (stdinput,*) edensity
           write (*,'(A,$)') '2) Temperature: '
-          read (*,*) etemperature
+          read (stdinput,*) etemperature
           write (*,'(A,$)') '3) Blast velocity (km/s): '
-          read (*,*) vblast
+          read (stdinput,*) vblast
           
           write (*,'(//,A,/)') '----- Knot -----'
           write (*,'(A,$)') '1) Density (cm^-3): '
-          read (*,*) wdensity
+          read (stdinput,*) wdensity
           write (*,'(A,$)') '2) Temperature: '
-          read (*,*) wtemperature
+          read (stdinput,*) wtemperature
           write (*,'(A,$)') '3) Position of centre x,y,z (cm): '
-          read (*,*) x0,y0,z0
+          read (stdinput,*) x0,y0,z0
           write (*,'(A,$)') '4) Axis 1: '
-          read (*,*) axis1
+          read (stdinput,*) axis1
           write (*,'(A,$)') '5) Axis 2: '
-          read (*,*) axis2
+          read (stdinput,*) axis2
           write (*,'(A,$)') '6) Axis 3: '
-          read (*,*) axis3
+          read (stdinput,*) axis3
           write (*,'(A,$)') '7) Rotation angle1: '
-          read (*,*) rotangle1
+          read (stdinput,*) rotangle1
           write (*,'(A,$)') '8) Rotation angle2: '
-          read (*,*) rotangle2
+          read (stdinput,*) rotangle2
        endif
 
        ! report input parameters
@@ -338,7 +343,7 @@ contains
     integer :: i,j,k
 
     ! Point state to appropriate array
-    state=set_state_pointer(newold)
+    state => set_state_pointer(newold)
 
     if (sx == 1) then
        do k=sz-1,ez+1

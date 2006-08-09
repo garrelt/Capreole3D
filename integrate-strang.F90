@@ -36,8 +36,7 @@ contains
     ! Local variables
     integer :: istop1,istop2
     integer :: inegative
-    logical :: protected
-    integer :: i,j,k,ieq,ierror,num,mpierror
+    integer :: ierror,num,mpierror
 
     integer,dimension(nrOfDim) :: instep
     
@@ -99,7 +98,6 @@ contains
           !call exchngxy(NEW)
 
           ! Protect against negative pressures
-	  pressr(50,50,50)=-pressr(50,50,50)
           call presprot(inegative,2,NEW)
           istop2=inegative
 #ifdef MPI	
@@ -135,8 +133,8 @@ contains
     integer,intent(out) :: itoterror
     
     ! Local variables
-    integer ::  i,j,k,ieq,icntl,ij,ik,mesh,ioff,ierror
-    real(kind=dp),dimension(2) :: edge
+    integer ::  i,j,k,ieq,ij,ik,mesh,ioff,ierror
+    !real(kind=dp),dimension(2) :: edge
 
     ! Initialize error status to zero
     itoterror=0
@@ -191,7 +189,7 @@ contains
     
     integer,intent(out) :: itoterror
     
-    integer :: i,j,k,ieq,icntl,ij,ik,mesh,joff,ierror
+    integer :: i,j,k,ieq,ij,ik,mesh,joff,ierror
 
     ! Initialize status to zero
     itoterror=0
@@ -246,7 +244,7 @@ contains
     
     integer,intent(out) :: itoterror
     
-    integer :: i,j,k,ieq,icntl,ij,ik,mesh,koff,ierror
+    integer :: i,j,k,ieq,ij,ik,mesh,koff,ierror
 
     ! Initialize status to zero
     itoterror=0

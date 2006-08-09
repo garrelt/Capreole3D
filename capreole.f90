@@ -41,6 +41,7 @@ Program Capreole
   !----------------------------------------------------------------------------
 
   use my_mpi
+  use file_admin, only: stdinput
   use mesh
   use output
   use grid
@@ -60,12 +61,31 @@ Program Capreole
   ! Error flag
   integer :: ierror
 
+  ! iargc library function (number of command line arguments)
+  integer :: iargc
+
+  ! Input file
+  character(len=512) :: inputfile
+
   !----------------------------------------------------------------------------
 
+  ! Initialize cpu timer
   call cpu_time(tstart)
 
+  ! Set up MPI structure
   call mpi_setup()
 
+  ! Set up input stream (either standard input or from file given
+  ! by first argument)
+  if (iargc() > 0) then
+     call getarg(1,inputfile)
+     if (rank == 0) then
+        write(*,*) 'reading input from ',trim(adjustl(inputfile))
+        open(unit=stdinput,file=inputfile)
+     endif
+  endif
+
+  ! Initialize computational mesh
   call init_mesh()
 
   ! Initialize output routines

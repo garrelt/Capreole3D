@@ -12,7 +12,7 @@ module mesh
   ! 3D version
 
   use my_mpi
-  
+  use file_admin, only: stdinput
   private
 
   integer,public :: meshx,meshy,meshz ! total grid size in x, y, z
@@ -33,7 +33,7 @@ contains
     if (rank == 0) then
        print "(2/,A,/)", "----- Grid -----"
        write(unit=*,fmt="(a)",advance="no") "1) Number of grid points: "
-       read (unit=*,fmt=*) meshx,meshy,meshz
+       read (unit=stdinput,fmt=*) meshx,meshy,meshz
 
     ! Report
        write(unit=30,fmt="(2/,A,/)") "----- Grid -----"

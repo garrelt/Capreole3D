@@ -66,7 +66,7 @@ contains
     integer,intent(in) :: newold
 
     ! Point state to appropriate array
-    state=set_state_pointer(newold)
+    state => set_state_pointer(newold)
  
     ! allocate flag and flux arrays if not allocated before
     if (.not.(allocated(flag))) then

@@ -67,7 +67,7 @@ contains
     ierror=0 ! nullify error variable
 
     ! Point state to appropriate array
-    state=set_state_pointer(newold)
+    state => set_state_pointer(newold)
 
     do k=kst,kfi
        do j=jst,jfi
@@ -114,7 +114,7 @@ contains
     real(kind=dp) :: dcell ! cell size
 
     ! Point state to appropriate array
-    state=set_state_pointer(newold)
+    state => set_state_pointer(newold)
     
     vmax=-1.0d0
     dcell=min(dy,dx,dz)

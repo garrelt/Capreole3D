@@ -48,11 +48,11 @@ contains
     !real(kind=dp),dimension(sx-1:ex+2,sy-1:ey+2,neq) :: fdiff
     !real(kind=dp),dimension(sx-1:ex+2,sy-1:ey+2,neq) :: gdiff
     logical :: problem
-    integer :: ix,jx,imin,jmin,iplus,jplus,kmin,kplus
+    integer :: imin,jmin,iplus,jplus,kmin,kplus
     integer :: ierror
     
     ! Point state to appropriate array
-    state=set_state_pointer(newold)
+    state => set_state_pointer(newold)
 
     inegative=0
     problem=.false.

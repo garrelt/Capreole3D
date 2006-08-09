@@ -1,5 +1,6 @@
 module output
   
+  use file_admin, only: stdinput
   use precision
   use scaling
   use sizes
@@ -29,11 +30,8 @@ contains
     logical,intent(in) :: restart
     integer,intent(out) :: ierror
 
-    integer  :: i,j,ieq ! counters and error flags
     character(len=19) :: filename ! name of output file
-    character(len=6) :: string_nframe,string_rank ! string version of integers
     character(len=8) :: date
-    character(len=4) :: string_frame
     logical :: test_exist
 
     ! Construct date-identifier: d-m-y
@@ -44,7 +42,7 @@ contains
     ! Run ID
     if (rank.eq.0) then
        write(*,'(A,$)') 'Run ID (one letter): '
-       read(*,*) runid
+       read(stdinput,*) runid
        ! Inquire if it exists
        if (.not.restart) then
           do
@@ -83,14 +81,13 @@ contains
 
     integer   :: ierror,i,j,k,ieq ! counters and error flags
     character(len=19) :: filename ! name of output file
-    character(len=6)  :: string_nframe,string_rank ! string version of integers
     character(len=4)  :: string_frame
     integer :: space
 
-    integer,parameter :: outputcircle=601
-    integer :: request,nextproc
 #ifdef MPI
     integer :: status(MPI_STATUS_SIZE)
+    integer :: request,nextproc
+    integer,parameter :: outputcircle=601
 #endif
 
     ierror=0
