@@ -18,18 +18,19 @@ module ionic
 
 contains
 
-  subroutine init_ionic(r_interface)
+  subroutine init_ionic(restart,r_interface)
 
     ! This subroutine initializes the atomic/ionic fractions
     ! Garrelt Mellema
 
     ! Version: dummy
 
+    logical,intent(in) :: restart
     real(kind=dp),intent(in) :: r_interface
 
   end subroutine init_ionic
 
-  subroutine update_ionic(dt)
+  subroutine rad_evolve3d(dt)
 
     ! updates the radiation connected quantities one timestep
     ! garrelt mellema
@@ -38,7 +39,7 @@ contains
 
     real(kind=dp),intent(in) :: dt
     
-  end subroutine update_ionic
+  end subroutine rad_evolve3d
     
 end module ionic
 
