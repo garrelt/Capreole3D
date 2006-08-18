@@ -56,7 +56,7 @@ contains
     call fnd3ddecomp ()
 
     ! Report the grid for the local processor
-    write(unit=30,fmt=*) "Grid: ",sx,sy,ex,ey,sz,ez
+    write(unit=30,fmt=*) "Grid: ",sx,ex,sy,ey,sz,ez
     
   end subroutine init_mesh
 
