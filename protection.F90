@@ -57,15 +57,6 @@ contains
     inegative=0
     problem=.false.
 
-    if (.not.(allocated(fdiff))) allocate(fdiff(sx-1:ex+2,sy-1:ey+2, &
-         sz-1:ez+2,neq))
-    if (.not.(allocated(gdiff))) allocate(gdiff(sx-1:ex+2,sy-1:ey+2, &
-         sz-1:ez+2,neq))
-    if (.not.(allocated(hdiff))) allocate(hdiff(sx-1:ex+2,sy-1:ey+2, &
-         sz-1:ez+2,neq))
-    fdiff(:,:,:,:)=0.0d0
-    gdiff(:,:,:,:)=0.0d0
-    hdiff(:,:,:,:)=0.0d0
 
     do k=sz,ez
        do j=sy,ey
@@ -81,6 +72,19 @@ contains
                      i,j,k,' time = ',time
                 write(30,*) 'call ',icall
                 call flush(30)
+
+                ! Initialize 
+                if (problem == .false.) then
+                   if (.not.(allocated(fdiff))) &
+                        allocate(fdiff(sx-1:ex+2,sy-1:ey+2,sz-1:ez+2,neq))
+                   if (.not.(allocated(gdiff))) &
+                        allocate(gdiff(sx-1:ex+2,sy-1:ey+2,sz-1:ez+2,neq))
+                   if (.not.(allocated(hdiff))) &
+                        allocate(hdiff(sx-1:ex+2,sy-1:ey+2,sz-1:ez+2,neq))
+                   fdiff(:,:,:,:)=0.0d0
+                   gdiff(:,:,:,:)=0.0d0
+                   hdiff(:,:,:,:)=0.0d0
+                endif
                 ! Set a control variable
                 problem=.true.
 
