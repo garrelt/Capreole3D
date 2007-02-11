@@ -80,7 +80,7 @@ Program Capreole
   if (iargc() > 0) then
      call getarg(1,inputfile)
      if (rank == 0) then
-        write(*,*) 'reading input from ',trim(adjustl(inputfile))
+        write(30,*) 'reading input from ',trim(adjustl(inputfile))
         open(unit=stdinput,file=inputfile)
      endif
   endif
