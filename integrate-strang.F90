@@ -92,7 +92,7 @@ contains
           call exchngxy(NEW)
 
           ! Odd-even fix
-          !call odd_even(-1,NEW)
+          !call odd_even(NEW,-1)
 
           ! exchange boundaries with neighbours
           ! This routine also calculates the new pressure
