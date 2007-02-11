@@ -9,9 +9,9 @@ module atomic
 
   ! Version: cgs
 
-  use precision
-  use scaling
-  use cgsconstants
+  use precision, only: dp
+  use scaling, only: scvelo
+  use cgsconstants, only: kb, m_p
 
   private
 
