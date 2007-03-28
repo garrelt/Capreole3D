@@ -15,8 +15,8 @@ module hydro
   implicit none
   private
 
-  real(kind=dp),dimension(:,:,:,:),allocatable,target,public :: stold
-  real(kind=dp),dimension(:,:,:,:),allocatable,target,public :: stnew
+  real(kind=dp),dimension(:,:,:,:),allocatable,target,public :: state1
+  real(kind=dp),dimension(:,:,:,:),allocatable,target,public :: state2
   real(kind=dp),dimension(:,:,:),allocatable,public   :: pressr
 
   ! These pointers are either used as a generic name (state)
@@ -24,6 +24,8 @@ module hydro
   ! or as temporary storage during initialization.
   real(kind=dp),pointer,dimension(:,:,:,:),public :: state
   real(kind=dp),pointer,dimension(:,:,:,:),public :: tmpstate
+  real(kind=dp),pointer,dimension(:,:,:,:),public :: stold
+  real(kind=dp),pointer,dimension(:,:,:,:),public :: stnew
 
   integer,parameter,public :: NEW=1
   integer,parameter,public :: OLD=0
@@ -39,12 +41,17 @@ contains
     logical,intent(in) :: restart
 
     ! Allocate the arrays
-    allocate(stold(sx-mbc:ex+mbc,sy-mbc:ey+mbc,sz-mbc:ez+mbc,neq))
-    allocate(stnew(sx-mbc:ex+mbc,sy-mbc:ey+mbc,sz-mbc:ez+mbc,neq))
+    allocate(state1(sx-mbc:ex+mbc,sy-mbc:ey+mbc,sz-mbc:ez+mbc,neq))
+    allocate(state2(sx-mbc:ex+mbc,sy-mbc:ey+mbc,sz-mbc:ez+mbc,neq))
     allocate(pressr(sx-mbc:ex+mbc,sy-mbc:ey+mbc,sz-mbc:ez+mbc))
+    
+    ! point stnew to state2
+    stold => state1
+    ! point stnew to state2
+    stnew => state2
 
-    ! point generic state variable to stnew
-    state => stnew
+    ! point generic state variable to stold
+    state => stold
 
   end subroutine init_hydro
 

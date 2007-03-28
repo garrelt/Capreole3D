@@ -59,7 +59,14 @@ contains
     do
        nstep=nstep+1 ! count the integration loops
        
-       stold(:,:,:,:)=stnew(:,:,:,:)   ! copy new state to old state
+       if (mod(nstep,2) == 0) then
+          stold => state2   ! copy new state to old state
+          stnew => state1   ! copy new state to old state
+       else
+          stold => state1   ! copy new state to old state
+          stnew => state2   ! copy new state to old state
+       endif
+       !stold(:,:,:,:)=stnew(:,:,:,:)   ! copy new state to old state
        
        ! Determine the time step on the local grid;
        ! the timestep function has to be supplied

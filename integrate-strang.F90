@@ -2,7 +2,7 @@ module integrator
 
   ! Module for Capreole (3D)
   ! Author: Garrelt Mellema
-  ! Date: 2003-08-14
+  ! Date: 2006-03-27 (2003-08-14)
  
   ! Integrates the set of equations over one time step (dt).
 
@@ -65,11 +65,23 @@ contains
 
           select case (instep(num))
           case (1)
-             if (meshx > 1) call xintegr(ierror)
+             if (meshx > 1) then
+                call xintegr(ierror)
+             else
+                stnew=stold ! no evolution (to get the pointers right)
+             endif
           case (2)
-             if (meshy > 1) call yintegr(ierror)
+             if (meshy > 1) then
+                call yintegr(ierror)
+             else
+                stnew=stold ! no evolution (to get the pointers right)
+             endif
           case (3)
-             if (meshz > 1) call zintegr(ierror)
+             if (meshz > 1) then
+                call zintegr(ierror)
+             else
+                stnew=stold ! no evolution (to get the pointers right)
+             endif
           end select
 
           ! check for hydro errors (ierror <> 0)
@@ -99,7 +111,8 @@ contains
           !call exchngxy(NEW)
 
           ! Protect against negative pressures
-          call presprot(inegative,2,NEW)
+          !pressr(20,20,20)=-0.01*pressr(20,20,20)
+          call presprot(inegative,instep(num),NEW)
           istop2=inegative
 #ifdef MPI	
           call MPI_ALLREDUCE(inegative,istop2,1,MPI_INTEGER,MPI_MAX, &
@@ -112,11 +125,20 @@ contains
           call exchngxy(NEW)
 
           ! Copy new state to old state
-          stold=stnew
+          !stold=stnew
+          if (mod(num+nstep,2) == 0) then
+             stold => state2
+             stnew => state1
+          else
+             stold => state1
+             stnew => state2
+          endif
        endif istoptest
     enddo
 
     if (istop == 0) then ! otherwise serious error occurred
+       ! Point generic state array to stnew
+       state => stold
        call rad_evolve3D(dt)
        ! exchange boundaries with neighbours
        ! This routine also calculates the new pressure
