@@ -7,8 +7,11 @@ module protection
   ! This module contains the routines related to the negative
   ! pressure / density / total energy correction
 
-  use precision
-  use scaling
+  ! Version: creates flux arrays for the whole mesh, memory
+  !  intensive.
+
+  use precision, only:dp
+  !use scaling
   use sizes
   use mesh
   use grid
@@ -34,12 +37,13 @@ contains
     real(kind=dp),parameter :: eta=0.05d0 
 
     ! the minimum temperature applied in stage 2)
-    real(kind=dp),parameter :: tmin=1.0d-10
+    real(kind=dp),parameter :: tmin=1.0d1
 
     integer,intent(out) :: inegative ! control integer; /= 0 if fixes failed
     integer,intent(in)  :: icall ! call id (to distinguish between different
                                  !  calls to this subroutine)
     integer,intent(in) :: newold
+
     integer :: i,j,k,ieq
     real(kind=dp)    :: pnew
     real(kind=dp),dimension(:,:,:,:),allocatable,save :: fdiff
@@ -54,18 +58,21 @@ contains
     ! Point state to appropriate array
     state => set_state_pointer(newold)
 
+    ! Initialize flags
     inegative=0
     problem=.false.
 
-
-    do k=sz,ez
-       do j=sy,ey
-          do i=sx,ex
+    ! Check the whole mesh, plus the first row of ghost cells.
+    ! The latter is needed to be consistent with neighbouring meshes
+    ! in a parallel run.
+    do k=sz-1,ez+1
+       do j=sy-1,ey+1
+          do i=sx-1,ex+1
              ! Check for negative pressure/density/energy
              if (pressr(i,j,k) <= 0.0.or.state(i,j,k,RHO) <= 0.0.or. &
                   state(i,j,k,EN) <= 0.0) then
                 ! Report to log file
-                write(30,'(A,1PE10.3,2(2X,E10.3),$)') &
+                write(30,'(A,1PE10.3,2(2X,E10.3))') &
                      'Negative pressure/density/energy: ', &
                      pressr(i,j,k),state(i,j,k,RHO),state(i,j,k,EN)
                 write(30,'(A,3(I4,X),A,1PE10.3)') ' at ', &
@@ -73,7 +80,7 @@ contains
                 write(30,*) 'call ',icall
                 call flush(30)
 
-                ! Initialize 
+                ! Allocate arrays if this is the first problem
                 if (problem == .false.) then
                    if (.not.(allocated(fdiff))) &
                         allocate(fdiff(sx-1:ex+2,sy-1:ey+2,sz-1:ez+2,neq))
@@ -85,7 +92,7 @@ contains
                    gdiff(:,:,:,:)=0.0d0
                    hdiff(:,:,:,:)=0.0d0
                 endif
-                ! Set a control variable
+                ! Set the control variable
                 problem=.true.
 
                 ! Pressure fix 1: diffuse with four neighbours
@@ -132,9 +139,9 @@ contains
     if (problem) then
        ! Apply fluxes
        do ieq=1,neq
-          do k=sz,ez
-             do j=sy,ey
-                do i=sx,ex
+          do k=sz-1,ez+1
+             do j=sy-1,ey+1
+                do i=sx-1,ex+1
                    state(i,j,k,ieq)=state(i,j,k,ieq)+eta* &
                         (fdiff(i,j,k,ieq)-fdiff(i+1,j,k,ieq) + &
                          gdiff(i,j,k,ieq)-gdiff(i,j+1,k,ieq) + &
