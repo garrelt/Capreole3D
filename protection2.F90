@@ -10,17 +10,19 @@ module protection
   ! Memory saving version
 
   use precision, only:dp
-  !use scaling
-  use sizes
-  use mesh
-  use grid
-  use hydro
-  use times
-  use atomic
-  use geometry
+  use sizes, only: mbc,neq, neuler, RHO, EN
+  use mesh, only: meshx, meshy, meshz, sx,ex,sy,ey,sz,ez
+  use hydro, only: state, pressr, set_state_pointer
+  use times, only: time
+  use atomic, only: boltzm, xmu, gamma1
+  use geometry, only: presfunc
 
   implicit none
-  
+
+  private
+
+  public:: presprot
+
 contains
   !========================================================================
 

@@ -11,17 +11,19 @@ module protection
   !  intensive.
 
   use precision, only:dp
-  !use scaling
-  use sizes
-  use mesh
-  use grid
-  use hydro
-  use times
-  use atomic
-  use geometry
+  use sizes, only: mbc,neq, RHO, EN
+  use mesh, only: meshx, meshy, meshz, sx,ex,sy,ey,sz,ez
+  use hydro, only: state, pressr, set_state_pointer
+  use times, only: time
+  use atomic, only: boltzm, xmu, gamma1
+  use geometry, only: presfunc
 
   implicit none
   
+  private
+
+  public:: presprot
+
 contains
   !========================================================================
 
@@ -165,6 +167,9 @@ contains
                    call flush(30)
 
                    ! Pressure fix 2: set temperature to minimum value
+                   ! Note: xmu should depend on the ionization state,
+                   ! but for pure hydro this would not be defined.
+                   ! Fix: include in ionic / no_ionic
                    pnew=state(i,j,k,RHO)*boltzm*tmin/xmu
                    state(i,j,k,EN)=state(i,j,k,EN)+(pnew-pressr(i,j,k))/gamma1
                    pressr(i,j,k)=pnew
