@@ -94,12 +94,7 @@ contains
     write(30,*) 'Writing Frame: ',nframe
       
     ! Construct file name and open the file
-    write(string_frame,'(i4)') nframe
-    do
-       space=index(string_frame,' ')
-       if (space == 0) exit
-       string_frame(space:space)='0'
-    enddo
+    write(string_frame,'(i4.4)') nframe
     filename=revdate//'_'//runid//'_'//string_frame//'.ah3'
     
     ! AH3D output format (24-10-2002)
