@@ -125,7 +125,15 @@ contains
           call exchngxy(NEW)
 
           ! Copy new state to old state
-          !stold=stnew
+          ! This is now done by pointing stnew and stold
+          ! alternatingly to state1 and state2, thus eliminating
+          ! the need of a data copy.
+          ! To establish where we are in this cycle we also need
+          ! to know the number of time steps that have been taken
+          ! (nstep).
+          ! Note that the fact that we have an odd number of
+          ! dimensions implies that after a full cycle, the
+          ! newest state is actually found in stold.
           if (mod(num+nstep,2) == 0) then
              stold => state2
              stnew => state1
@@ -137,12 +145,15 @@ contains
     enddo
 
     if (istop == 0) then ! otherwise serious error occurred
-       ! Point generic state array to stnew
+       ! Point generic state array to stold (the newest at this point)
        state => stold
+       ! Apply radiative processes.
+       ! rad_evolve changes state in place (so no changing from stold
+       ! to stnew is involved).
        call rad_evolve3D(dt)
        ! exchange boundaries with neighbours
        ! This routine also calculates the new pressure
-       call exchngxy(NEW)
+       call exchngxy(OLD)
     endif
 
   end subroutine integrate
