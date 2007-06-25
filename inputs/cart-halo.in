@@ -1,0 +1,16 @@
+256,256,256      ! Mesh size
+a                ! Output ID
+1.6, 1.6, 1.6 kpc ! Grid size (plus unit)
+91.5             ! core radius (pc)
+3.2              ! core density (cm^-3)
+1e4     	 ! Temperature (K)
+100000.          ! Source: Teff (K)
+3                ! Next number is photons/s
+1.0e50           ! Source: Photons
+y                ! Specify source location (y/n)
+0.5,0.5,0.5	 ! Source location (relative, grid=1)
+1.0              ! Clumping factor
+0.5 Myr          ! output interval (plus unit)
+150              ! number of outputs
+
+

@@ -1,0 +1,14 @@
+128,128,128             ! mesh size (x,y,z)
+a                       ! runid letter
+3.2e17,3.2e17,3.2e17 cm ! physical size of grid (plus unit)
+cloud.bin               ! name of density file
+1			! isothermal or isobaric
+18.0                    ! temperature of cloud (K)
+46000.                  ! Teff
+3                       ! Choice for flux input
+1.44e50                 ! L_star
+y                       ! specify source position
+-1.85e19,1.6e17,1.6e17  ! source position (cm)
+1.0                     ! clumping
+50 yrs                  ! time between outputs (plus unit)
+30                      ! number of outputs

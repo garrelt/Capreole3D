@@ -1,0 +1,15 @@
+250,250,250			! mesh size (x,y,z)
+a				! runid letter
+5 5 5 kpc			! physical size of grid (plus unit)
+1e7				! Minihalo mass (solar masses)
+10.0				! Redshift
+10.0				! Temperature outside halo (K)
+7.715e21, 7.715e21, 7.715e21	! Centre of minihalo (cm)
+50e3				! Teff
+3				! Choice for flux input
+1e53				! S_star
+y				! Source position (y/n)
+-3e23 3.8755e21, 3.8755e21	! Source position (cm)
+1.0				! clumping
+5e6 yrs				! time between outputs (plus unit)
+20				! number of outputs
