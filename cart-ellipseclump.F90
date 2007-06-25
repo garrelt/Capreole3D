@@ -242,7 +242,7 @@ contains
        ! smoothed. We achieve this by diffusing the state variables a number
        ! of time with a high diffuse parameter eta. 
        
-       tmpstate => stold ! Use stold for temporary storage of state
+       tmpstate => stnew ! Use stnew for temporary storage of state
        if (eta > 0.0d0) then
           do nitt=1,10
              do ieq=1,neq
@@ -346,7 +346,7 @@ contains
     ! Point state to appropriate array
     state => set_state_pointer(newold)
 
-    if (sx == 1) then
+    if (sx == 1 .and. sevelocity > 0.0) then
        do k=sz-1,ez+1
           do j=sy-1,ey+1
              do i=1-mbc,1
