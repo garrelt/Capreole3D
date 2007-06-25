@@ -23,7 +23,7 @@ module geometry
   !             as arguments to timestep and presfunc. state is now a
   !             pointer, pointing to stnew or stold (see hydro.F90).
 
-  use precision
+  use precision, only: dp
   use scaling
   use sizes
   use mesh
@@ -32,9 +32,12 @@ module geometry
   use hydro
   use times
 
+  implicit none
+
   private
 
-  real(kind=dp),public :: maxdt=1.0e20_dp ! non CFL limit on time step
+  real(kind=dp),public :: maxdt=5.0e18_dp/SCTIME ! non CFL limit on time step
+  real(kind=dp),private :: vmax_initial=15e5_dp/SCVELO ! non CFL limit on time step
 
   public :: timestep,presfunc
 
@@ -48,6 +51,7 @@ contains
     real(kind=dp) :: absvel_result
     real(kind=dp),dimension(neq) :: st0d
 
+    if (st0d(RHO) == 0.0) write(*,*) 'ERROR'
     absvel_result=(st0d(RHVX)*st0d(RHVX)+st0d(RHVY)*st0d(RHVY)+ &
          st0d(RHVZ)*st0d(RHVZ))/(st0d(RHO)*st0d(RHO))
 
@@ -116,7 +120,7 @@ contains
     ! Point state to appropriate array
     state => set_state_pointer(newold)
     
-    vmax=-1.0d0
+    vmax=vmax_initial
     dcell=min(dy,dx,dz)
     
     do k=sz,ez
@@ -124,12 +128,12 @@ contains
           do i=sx,ex
              vs=sqrt(max(0.0d0,gamma*pressr(i,j,k)/state(i,j,k,RHO)))
              vabs=sqrt(absvel(state(i,j,k,:)))
-             vmax=max(vmax,(vs+vabs)/dcell)
+             vmax=max(vmax,(vs+vabs))
           enddo
        enddo
     enddo
 
-    timestep_result=min(maxdt,cfl/vmax)
+    timestep_result=min(maxdt,cfl*dcell/vmax)
 
   end function timestep
 
