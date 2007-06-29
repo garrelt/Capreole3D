@@ -14,7 +14,8 @@ module protection
   use mesh, only: meshx, meshy, meshz, sx,ex,sy,ey,sz,ez
   use hydro, only: state, pressr, set_state_pointer
   use times, only: time
-  use atomic, only: boltzm, xmu, gamma1
+  use abundances, only: mu
+  use atomic, only: boltzm, gamma1
   use geometry, only: presfunc
 
   implicit none
@@ -100,6 +101,7 @@ contains
                    ! enough positive pressure itself, or if we are
                    ! correcting a negative density or energy.
                    if (-(pressr(imin,j,k)/pressr(i,j,k)) > eta .or. &
+                        -(state(imin,j,k,RHO)/state(i,j,k,RHO)) > eta .or. &
                         pressr(i,j,k) > 0.0d0 ) then
                       problem_list(problem_counter)%dflux(1,1,:)= &
                            (state(imin,j,k,:)-state(i,j,k,:))
@@ -107,6 +109,7 @@ contains
                       problem_list(problem_counter)%dflux(1,1,:)=0.0
                    endif
                    if (-(pressr(iplus,j,k)/pressr(i,j,k)) > eta .or. &
+                        -(state(iplus,j,k,RHO)/state(i,j,k,RHO)) > eta .or. &
                         pressr(i,j,k) > 0.0d0 ) then
                       problem_list(problem_counter)%dflux(2,1,:)= &
                            (-state(iplus,j,k,:)+state(i,j,k,:))
@@ -114,6 +117,7 @@ contains
                       problem_list(problem_counter)%dflux(2,1,:)=0.0
                    endif
                    if (-(pressr(i,jmin,k)/pressr(i,j,k)) > eta .or. &
+                        -(state(i,jmin,k,RHO)/state(i,j,k,RHO)) > eta .or. &
                         pressr(i,j,k) > 0.0d0 ) then
                       problem_list(problem_counter)%dflux(1,2,:)= &
                            (state(i,jmin,k,:)-state(i,j,k,:))
@@ -121,6 +125,7 @@ contains
                       problem_list(problem_counter)%dflux(1,2,:)=0.0
                    endif
                    if (-(pressr(i,jplus,k)/pressr(i,j,k)) > eta .or. &
+                        -(state(i,jplus,k,RHO)/state(i,j,k,RHO)) > eta .or. &
                         pressr(i,j,k) > 0.0d0 ) then
                       problem_list(problem_counter)%dflux(2,2,:)= &
                            (-state(i,jplus,k,:)+state(i,j,k,:))
@@ -128,6 +133,7 @@ contains
                       problem_list(problem_counter)%dflux(2,2,:)=0.0
                    endif
                    if (-(pressr(i,j,kmin)/pressr(i,j,k)) > eta .or.  &
+                        -(state(i,j,kmin,RHO)/state(i,j,k,RHO)) > eta .or. &
                         pressr(i,j,k) > 0.0d0 ) then
                       problem_list(problem_counter)%dflux(1,3,:)= &
                            (state(i,j,kmin,:)-state(i,j,k,:))
@@ -135,6 +141,7 @@ contains
                       problem_list(problem_counter)%dflux(1,3,:)=0.0
                    endif
                    if (-(pressr(i,j,kplus)/pressr(i,j,k)) > eta .or. &
+                        -(state(i,j,kplus,RHO)/state(i,j,k,RHO)) > eta .or. &
                         pressr(i,j,k) > 0.0d0 ) then
                       problem_list(problem_counter)%dflux(2,3,:)= &
                            (-state(i,j,kplus,:)+state(i,j,k,:))
@@ -205,7 +212,10 @@ contains
                    call flush(30)
                    
                    ! Pressure fix 2: set temperature to minimum value
-                   pnew=state(i,j,k,RHO)*boltzm*tmin/xmu
+                   pnew=state(i,j,k,RHO)*boltzm*tmin/mu
+                   !pnew=temper2pressr(tmin,rho2n(state(i,j,k,RHO)), &
+                   !     electrondens(rho2n(state(i,j,k,RHO)), &
+                   !     state(i,j,k,XHI:XHII))
                    state(i,j,k,EN)=state(i,j,k,EN)+(pnew-pressr(i,j,k))/gamma1
                    pressr(i,j,k)=pnew
                 endif
