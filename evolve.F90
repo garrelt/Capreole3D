@@ -54,6 +54,8 @@ contains
     istop=0            ! initialize stop flag
     inegative=0        ! initialize negative density/energy flag
     
+    ! Make stold and stnew equal to start with
+    stnew=stold
 
     ! Integration loop
     do
