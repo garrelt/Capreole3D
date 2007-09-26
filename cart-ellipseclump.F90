@@ -17,17 +17,19 @@ module problem
 
   use file_admin, only: stdinput
   use precision, only: dp
+  use string_manipulation, only: convert_case
   use my_mpi
-  use sizes
-  use scaling
-  use atomic
-  use cgsconstants
+  use sizes, only: mbc,neq,RHO,RHVX,RHVY,RHVZ,EN
+  use scaling, only: SCDENS, SCVELO, SCLENG, SCENER
+  use cgsconstants, only: m_p, kb
+  use astroconstants, only: pc, kpc, Mpc
   use abundances, only: mu
-  use mesh
-  use grid
-  use hydro
-  use boundary
-  use ionic
+  use atomic, only: gamma, gamma1, boltzm
+  use mesh, only: sx,ex,sy,ey,sz,ez,meshx,meshy,meshz
+  use grid, only: x,y,z,dx,dy,dz
+  use hydro, only: state,pressr,set_state_pointer,NEW,OLD,stnew,tmpstate
+  use boundary, only: exchngxy
+  use ionic, only: init_ionic
 
   implicit none
 
@@ -59,6 +61,7 @@ contains
     integer :: i,j,k,nitt,ieq
     real(kind=dp)    :: r_interface ! dummy needed for calling init_ionic
 
+    character(len=10) :: str_length_unit,str_a1_unit,str_a2_unit,str_a3_unit
 #ifdef MPI       
     integer :: ierror
 #endif
@@ -80,14 +83,14 @@ contains
           read (stdinput,*) wdensity
           write (*,'(A,$)') '2) Temperature: '
           read (stdinput,*) wtemperature
-          write (*,'(A,$)') '3) Position of centre x,y,z (cm): '
-          read (stdinput,*) x0,y0,z0
+          write (*,'(A,$)') '3) Position of centre x,y,z (specify units): '
+          read (stdinput,*) x0,y0,z0,str_length_unit
           write (*,'(A,$)') '4) Axis 1: '
-          read (stdinput,*) axis1
+          read (stdinput,*) axis1,str_a1_unit
           write (*,'(A,$)') '5) Axis 2: '
-          read (stdinput,*) axis2
+          read (stdinput,*) axis2,str_a2_unit
           write (*,'(A,$)') '6) Axis 3: '
-          read (stdinput,*) axis3
+          read (stdinput,*) axis3,str_a3_unit
           write (*,'(A,$)') '7) Rotation angle1: '
           read (stdinput,*) rotangle1
           write (*,'(A,$)') '8) Rotation angle2: '
@@ -106,13 +109,21 @@ contains
           write (30,'(//,A,/)') '----- Knot -----'
           write (30,'(A,1PE10.3)') '1) Density (cm^-3): ',wdensity
           write (30,'(A,1PE10.3)') '2) Temperature: ',wtemperature
-          write (30,'(A,3(1PE10.3,X))') '3) Position of centre x,y (cm): ',&
-               x0,y0,z0
-          write (30,'(A,1PE10.3)') '4) Axis 1: ',axis1
-          write (30,'(A,1PE10.3)') '5) Axis 2: ',axis2
-          write (30,'(A,1PE10.3)') '6) Axis 3: ',axis3
+          write (30,'(A,3(1PE10.3,X),A)') '3) Position of centre x,y,z: ',&
+               x0,y0,z0,str_length_unit
+          write (30,'(A,1PE10.3,A)') '4) Axis 1: ',axis1,str_a1_unit
+          write (30,'(A,1PE10.3,A)') '5) Axis 2: ',axis2,str_a2_unit
+          write (30,'(A,1PE10.3,A)') '6) Axis 3: ',axis3,str_a3_unit
           write (30,'(A,F8.3)') '7) Rotation angle1: ',rotangle1
           write (30,'(A,F8.3)') '8) Rotation angle2: ',rotangle2
+
+          ! Convert to cm
+          x0=x0*unit_conversion(str_length_unit)
+          y0=y0*unit_conversion(str_length_unit)
+          z0=z0*unit_conversion(str_length_unit)
+          axis1=axis1*unit_conversion(str_a1_unit)
+          axis2=axis2*unit_conversion(str_a2_unit)
+          axis3=axis3*unit_conversion(str_a3_unit)
        endif
           
 #ifdef MPI       
@@ -153,9 +164,9 @@ contains
        
        ! Calculate the pressures
        
-       epressr=edensity*boltzm*etemperature/xmu
-       wpressr=wdensity*boltzm*wtemperature/xmu
-       wpressr=epressr       ! Pressure equilibrium!!!!
+       epressr=edensity*boltzm*etemperature/mu
+       wpressr=wdensity*boltzm*wtemperature/mu
+       !wpressr=epressr       ! Pressure equilibrium!!!!
        
        ! Calculate the properties of the shock wave 
        vs1=sqrt(gamma*epressr/edensity) ! Sound speed in unshocked gas
@@ -221,7 +232,7 @@ contains
                         0.5d0*(state(i,j,k,RHVX)*state(i,j,k,RHVX)+ &
                         state(i,j,k,RHVY)*state(i,j,k,RHVY)+ &
                         state(i,j,k,RHVZ)*state(i,j,k,RHVZ))/state(i,j,k,RHO)
-                   state(i,j,k,TRACER1)=1.0d0
+                   !state(i,j,k,TRACER1)=1.0d0
                 else
                    state(i,j,k,RHO)=edensity
                    state(i,j,k,RHVX)=0.0d0
@@ -232,7 +243,7 @@ contains
                         0.5d0*(state(i,j,k,RHVX)*state(i,j,k,RHVX)+ &
                         state(i,j,k,RHVY)*state(i,j,k,RHVY)+ &
                         state(i,j,k,RHVZ)*state(i,j,k,RHVZ))/state(i,j,k,RHO)
-                   state(i,j,k,TRACER1)=-1.0d0
+                   !state(i,j,k,TRACER1)=-1.0d0
                 endif
              enddo
           enddo
@@ -275,7 +286,7 @@ contains
              ! In order for the grid boundaries to be consistent, we need
              ! to reset them after each smoothing loop.
              ! exchange boundaries with neighbours
-             call exchngxy(NEW)
+             call exchngxy(OLD)
           enddo
        endif
 
@@ -298,7 +309,7 @@ contains
                         0.5d0*(state(i,j,k,RHVX)*state(i,j,k,RHVX)+ &
                         state(i,j,k,RHVY)*state(i,j,k,RHVY)+ &
                         state(i,j,k,RHVZ)*state(i,j,k,RHVZ))/state(i,j,k,RHO)
-                   state(i,j,k,TRACER1)=-1.0d0
+                   !state(i,j,k,TRACER1)=-1.0d0
                 endif
              enddo
           enddo
@@ -335,6 +346,17 @@ contains
 
   !==========================================================================
 
+  subroutine apply_grav_force(dt,newold)
+
+    ! Dummy routine
+
+    real(kind=dp),intent(in) :: dt
+    integer,intent(in) :: newold
+
+  end subroutine apply_grav_force
+    
+  !==========================================================================
+
   subroutine inflow (newold)
     
     ! This routine resets the inner boundary to the inflow condition
@@ -359,12 +381,45 @@ contains
                         0.5d0*(state(i,j,k,RHVX)*state(i,j,k,RHVX)+ &
                         state(i,j,k,RHVY)*state(i,j,k,RHVY)+ &
                         state(i,j,k,RHVZ)*state(i,j,k,RHVZ))/state(i,j,k,RHO)
-                state(i,j,k,TRACER1)=-1.0d0
+                !state(i,j,k,TRACER1)=-1.0d0
              enddo
           enddo
        enddo
     endif
     
   end subroutine inflow
-  
+
+  function unit_conversion(in_str_unit)
+    
+    real(kind=dp) :: unit_conversion
+
+    real(kind=dp) :: conversion_factor
+
+    character(len=10),intent(in) :: in_str_unit
+    character(len=10) :: str_unit
+    
+    str_unit=in_str_unit
+    call convert_case(str_unit,0) ! conversion to lower case
+    select case (trim(adjustl(str_unit)))
+    case ('cm','centimeter','cms','centimeters')
+       conversion_factor=1.0
+    case ('m','meter','ms','meters')
+       conversion_factor=100.0
+    case ('km','kilometer','kms','kilometers','clicks')
+       conversion_factor=1000.0
+    case ('pc','parsec','parsecs')
+       conversion_factor=pc
+    case ('kpc','kiloparsec','kiloparsecs')
+       conversion_factor=kpc
+    case ('mpc','megaparsec','megaparsecs')
+       conversion_factor=Mpc
+    case default
+       write(*,*) 'Length unit not recognized, assuming cm'
+       conversion_factor=1.0
+    end select
+    
+    unit_conversion=conversion_factor
+    
+  end function unit_conversion
+
 end module problem
