@@ -101,48 +101,54 @@ contains
                    ! enough positive pressure itself, or if we are
                    ! correcting a negative density or energy.
                    if (-(pressr(imin,j,k)/pressr(i,j,k)) > eta .or. &
-                        -(state(imin,j,k,RHO)/state(i,j,k,RHO)) > eta .or. &
-                        pressr(i,j,k) > 0.0d0 ) then
+                        -(state(imin,j,k,RHO)/state(i,j,k,RHO)) > eta) then
+                      !.or. &
+                      !  pressr(i,j,k) > 0.0d0 ) then
                       problem_list(problem_counter)%dflux(1,1,:)= &
                            (state(imin,j,k,:)-state(i,j,k,:))
                    else
                       problem_list(problem_counter)%dflux(1,1,:)=0.0
                    endif
                    if (-(pressr(iplus,j,k)/pressr(i,j,k)) > eta .or. &
-                        -(state(iplus,j,k,RHO)/state(i,j,k,RHO)) > eta .or. &
-                        pressr(i,j,k) > 0.0d0 ) then
+                        -(state(iplus,j,k,RHO)/state(i,j,k,RHO)) > eta) then
+                      !.or. &
+                      !  pressr(i,j,k) > 0.0d0 ) then
                       problem_list(problem_counter)%dflux(2,1,:)= &
                            (-state(iplus,j,k,:)+state(i,j,k,:))
                    else
                       problem_list(problem_counter)%dflux(2,1,:)=0.0
                    endif
                    if (-(pressr(i,jmin,k)/pressr(i,j,k)) > eta .or. &
-                        -(state(i,jmin,k,RHO)/state(i,j,k,RHO)) > eta .or. &
-                        pressr(i,j,k) > 0.0d0 ) then
+                        -(state(i,jmin,k,RHO)/state(i,j,k,RHO)) > eta) then
+                      !.or. &
+                      !  pressr(i,j,k) > 0.0d0 ) then
                       problem_list(problem_counter)%dflux(1,2,:)= &
                            (state(i,jmin,k,:)-state(i,j,k,:))
                    else
                       problem_list(problem_counter)%dflux(1,2,:)=0.0
                    endif
                    if (-(pressr(i,jplus,k)/pressr(i,j,k)) > eta .or. &
-                        -(state(i,jplus,k,RHO)/state(i,j,k,RHO)) > eta .or. &
-                        pressr(i,j,k) > 0.0d0 ) then
+                        -(state(i,jplus,k,RHO)/state(i,j,k,RHO)) > eta) then
+                      !.or. &
+                      !  pressr(i,j,k) > 0.0d0 ) then
                       problem_list(problem_counter)%dflux(2,2,:)= &
                            (-state(i,jplus,k,:)+state(i,j,k,:))
                    else
                       problem_list(problem_counter)%dflux(2,2,:)=0.0
                    endif
                    if (-(pressr(i,j,kmin)/pressr(i,j,k)) > eta .or.  &
-                        -(state(i,j,kmin,RHO)/state(i,j,k,RHO)) > eta .or. &
-                        pressr(i,j,k) > 0.0d0 ) then
+                        -(state(i,j,kmin,RHO)/state(i,j,k,RHO)) > eta) then
+                      !.or. &
+                      !  pressr(i,j,k) > 0.0d0 ) then
                       problem_list(problem_counter)%dflux(1,3,:)= &
                            (state(i,j,kmin,:)-state(i,j,k,:))
                    else
                       problem_list(problem_counter)%dflux(1,3,:)=0.0
                    endif
                    if (-(pressr(i,j,kplus)/pressr(i,j,k)) > eta .or. &
-                        -(state(i,j,kplus,RHO)/state(i,j,k,RHO)) > eta .or. &
-                        pressr(i,j,k) > 0.0d0 ) then
+                        -(state(i,j,kplus,RHO)/state(i,j,k,RHO)) > eta) then
+                      !.or. &
+                      !  pressr(i,j,k) > 0.0d0 ) then
                       problem_list(problem_counter)%dflux(2,3,:)= &
                            (-state(i,j,kplus,:)+state(i,j,k,:))
                    else
