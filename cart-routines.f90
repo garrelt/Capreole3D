@@ -36,8 +36,8 @@ module geometry
 
   private
 
-  real(kind=dp),public :: maxdt=5.0e18_dp/SCTIME ! non CFL limit on time step
-  real(kind=dp),private :: vmax_initial=15e5_dp/SCVELO ! non CFL limit on time step
+  real(kind=dp),public :: maxdt=5.0e11_dp/SCTIME ! non CFL limit on time step
+  real(kind=dp),private :: vmax_initial=10e5_dp/SCVELO ! non CFL limit on time step
 
   public :: timestep,presfunc
 
