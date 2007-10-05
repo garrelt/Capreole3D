@@ -55,8 +55,10 @@ Program Capreole
   ! Start and end time for CPU report
   real :: tstart,tend
 
-  ! Restart (disabled)
-  logical :: restart=.false.
+  ! Restart
+  logical :: restart!=.false.
+  character(len=19) :: restartfile
+  character(len=1) :: answer
 
   ! Error flag
   integer :: ierror
@@ -85,21 +87,39 @@ Program Capreole
      endif
   endif
 
+  ! Ask if this is a restart
+  if (rank == 0) then
+     write (*,'(A,$)') 'Restart of old run: (y/n): '
+     read (*,'(A1)') answer
+     if (answer == 'y' .or. answer == 'Y') then
+        restart=.true.
+        write (*,'(A,$)') 'Output file from which to restart: '
+        read (*,*) restartfile
+     else
+        restart=.false.
+     endif
+  endif
+#ifdef MPI
+    ! Tell the other nodes
+    call MPI_BCAST(restart,1,MPI_LOGICAL,0,MPI_COMM_NEW,ierror)
+    call MPI_BCAST(restartfile,19,MPI_CHARACTER,0,MPI_COMM_NEW,ierror)
+#endif
+
   ! Initialize computational mesh
-  call init_mesh()
+  call init_mesh(restart,restartfile)
 
   ! Initialize output routines
-  call init_output(restart,ierror)
+  call init_output(restart,restartfile,ierror)
 
   ! Initialize the coordinate system
-  call init_coords(restart)
+  call init_coords(restart,restartfile)
   
   ! Initialize the hydrodynamic variables
-  call init_hydro(restart) ! allocates arrays
-  call init_problem(restart) ! sets initial conditions
+  call init_hydro( ) ! allocates arrays
+  call init_problem(restart,restartfile) ! sets initial conditions
 
   ! Initialiaze time variables
-  call init_time(restart)
+  call init_time(restart,restartfile)
 
   ! Evolve the problem
   call evolve()
