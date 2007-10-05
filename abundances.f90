@@ -2,6 +2,7 @@ module abundances
 
   real(kind=8),parameter :: abu_he=0.1
   real(kind=8),parameter :: abu_c=3.3e-4
+  real(kind=8),parameter :: abu_o=3.0e-4
 
   real(kind=8),parameter :: mu=(1.0-abu_he)+4.0*abu_he
 
