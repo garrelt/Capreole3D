@@ -14,7 +14,7 @@ module integrator
   use hydro
   use times
   use problem
-  use protection
+  use protection, only: presprot
   use oddeven
   use boundary
   use hydrosolver

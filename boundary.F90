@@ -2,20 +2,22 @@ module boundary
 
   ! Module for Capreole
   ! Author: Garrelt Mellema
-  ! Date: 2004-05-11
+  ! Date: 2007-10-05 (previous 2004-05-11)
   !
   ! This module contains the routines related with handling the grid
   ! boundaries. This is mostly the internal boundaries.
+  !
+  ! History:
+  ! 2007-10-05: clean-up, added only's to use statements.
 
-  use precision
-  use scaling
+  use precision, only: dp
   use my_mpi
-  use sizes
-  use mesh
-  use grid
-  use geometry
-  use hydro
-  use atomic
+  use sizes, only: neq, mbc
+  use mesh, only: sx,ex,sy,ey,sz,ez
+  use grid, only: vol,volx
+  use geometry, only: presfunc
+  use hydro, only: state, NEW,OLD, set_state_pointer
+  !use atomic
 
   implicit none
 

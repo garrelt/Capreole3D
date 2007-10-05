@@ -1,8 +1,8 @@
 module evolution
 
-  ! Module for Capreole
+  ! Module for Capreole (3D)
   ! Author: Garrelt Mellema
-  ! Date: 2004-05-11
+  ! Date: 2007-10-05 (previous 2004-05-11)
 
   ! This module contains the routines for the framework of the
   ! hydrodynamics calculation.
@@ -10,16 +10,18 @@ module evolution
   ! Contents:
   ! evolve - basic integration frame work
 
-  use precision
-  use scaling
-  use sizes
-  use mesh
-  use grid
-  use hydro
-  use times
-  use output
-  use geometry
-  use integrator
+  ! History:
+  ! 2007-10-05: clean up, added only's to use statement, using
+  !             log_unit
+
+  use precision, only: dp
+  use file_admin, only: log_unit
+  use scaling, only: sctime
+  use hydro, only: stold,stnew,state1,state2,state,NEW,OLD
+  use times, only: time,frametime,dt,LastFrame
+  use output, only: make_output
+  use geometry, only: timestep
+  use integrator, only: integrate
 
   implicit none
 
@@ -31,19 +33,22 @@ contains
     
     ! This routine handles the basic integration frame work
 
-    integer :: nstep,inegative,istop ! various control
-                                                    !   integers
+    integer :: nstep,inegative,istop ! various control integers
     real(kind=dp)    :: dtlocal    ! processor local time step
     real(kind=dp)    :: nexttime   ! timer for output
     integer :: nframe              ! integers for output
+
 #ifdef MPI
-    integer :: ierror
+    integer :: mpi_ierror
 #endif
 
     !--------------------------------------------------------------------------
-
+    ! initialize output counter
+    ! Note: this assumes that frametime was not changed
+    ! in case of a restart
+    nframe=nint(time/frametime)
+ 
     ! Report initial conditions
-    nframe=int(time/frametime) ! initialize output counter
     if (nframe == 0) call make_output(nframe)
 
     ! Set time for next output
@@ -55,24 +60,29 @@ contains
     inegative=0        ! initialize negative density/energy flag
     
     ! Make stold and stnew equal to start with
+    ! This assumes that the initialization routines
+    ! worked with stold.
     stnew=stold
 
     ! Integration loop
     do
        nstep=nstep+1 ! count the integration loops
        
+       ! To avoid costly data copying, we flip pointers
+       ! between state1 and state2.
+       ! The integrate routine als does this. If any changes
+       ! have to be made also check there.
        if (mod(nstep,2) == 0) then
-          stold => state2   ! copy new state to old state
-          stnew => state1   ! copy new state to old state
+          stold => state2
+          stnew => state1
        else
-          stold => state1   ! copy new state to old state
-          stnew => state2   ! copy new state to old state
+          stold => state1
+          stnew => state2
        endif
-       !stold(:,:,:,:)=stnew(:,:,:,:)   ! copy new state to old state
        
        ! Determine the time step on the local grid;
        ! the timestep function has to be supplied
-       state => stold
+       state => stold ! make sure state points to stold
        dtlocal=timestep(cfl,OLD)
        dt=dtlocal
 
@@ -80,39 +90,40 @@ contains
        ! communicate with all other processors to find
        ! the global minimal time step
        call MPI_ALLREDUCE(dtlocal,dt,1,MPI_DOUBLE_PRECISION,MPI_MIN, &
-            MPI_COMM_NEW,ierror)
+            MPI_COMM_NEW,mpi_ierror)
 #endif
        ! Make sure that dt does not take us beyond nexttime
        dt=min(nexttime-time,dt)
 
        ! Integrate one time step
+       ! istop will be non-zero in case of severe problems
        call integrate(nstep,istop)
 
-       time=time+dt          ! update time
+       time=time+dt ! update time
 
        ! Report time step info
-       write(30,'(A,I6,3(X,1PE10.3))') 'Time info: ',&
+       write(log_unit,'(A,I6,3(X,1PE10.3))') 'Time info: ',&
             nstep,time*sctime,dt*sctime,nexttime*sctime
-       call flush(30)
+       call flush(log_unit)
 
        ! Check the need for new output
        if (time >= nexttime) then
-          state => stnew
+          state => stold
           call make_output(nframe)
           nframe=nframe+1
           nexttime=nexttime+frametime
        endif
 
-       if (nframe.gt.LastFrame.or.istop.ne.0) exit ! end the integration loop
+       if (nframe > LastFrame .or. istop /= 0) exit ! end the integration loop
     enddo
 
     if (istop.ne.0) then
        ! Record conditions where error occured
-       write(30,*) 'Stop triggered by correction routine'
-       state => stnew
+       write(log_unit,*) 'Stop triggered by correction routine'
+       state => stold
        call make_output(nframe)
     else
-       write(30,*) 'Maximum number of frames reached; nframe = ',nframe
+       write(log_unit,*) 'Maximum number of frames reached; nframe = ',nframe
     endif
 
   end subroutine evolve

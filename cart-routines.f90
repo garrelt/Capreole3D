@@ -2,35 +2,33 @@ module geometry
 
   ! Module for Capreole (f90)
   ! Author: Garrelt Mellema
-  ! Date: 2004-05-12 (previous 2003-06-01)
+  ! Date: 2007-10-02 (previous 2004-05-12, 2003-06-01)
   ! This module is also accepted by the F compiler (Dec 9, 2003)
   !
   ! This module contains the routines related to or dependent on
-  ! the choice of the 2D coordinate system.
+  ! the choice of the 3D coordinate system.
   !
-  ! Version: cartesian coordinates (x,y).
+  ! Version: cartesian coordinates (x,y,z).
   ! 
   ! Contents:
+  ! absvel   : calculates absolute velocity
   ! timestep : calculates the CFL time step
-  ! xg1g2    : sets the geometric factors for the 1D hydro solver (x-direction)
-  ! yg1g2    : sets the geometric factors for the 1D hydro solver (y-direction)
-  ! xgeosource : sets the geometric source terms (x-direction)
-  ! ygeosource : sets the geometric source terms (y-direction)
   ! presfunc : calculates the pressure from the state variables
   !
   ! History:
   ! 2004-05-12: adapted for new approach without large (dynamic) arrays
   !             as arguments to timestep and presfunc. state is now a
   !             pointer, pointing to stnew or stold (see hydro.F90).
+  ! 2007-10-02: clean up. Added "only's" to the use commands.
 
   use precision, only: dp
-  use scaling
-  use sizes
-  use mesh
-  use grid
-  use atomic
-  use hydro
-  use times
+  use scaling, only: sctime, scvelo
+  use sizes, only: RHO, RHVX, RHVY, RHVZ, EN, neq
+  use mesh, only: sx,ex,sy,ey,sz,ez
+  use grid, only: dx,dy,dz
+  use atomic, only: gamma, gamma1
+  use hydro, only: state,pressr,NEW,OLD,set_state_pointer
+  use times, only: time
 
   implicit none
 
