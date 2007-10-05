@@ -18,6 +18,7 @@ module hydro
   real(kind=dp),dimension(:,:,:,:),allocatable,target,public :: state1
   real(kind=dp),dimension(:,:,:,:),allocatable,target,public :: state2
   real(kind=dp),dimension(:,:,:),allocatable,public   :: pressr
+  real(kind=dp),dimension(:,:,:,:),allocatable,public   :: gforce
 
   ! These pointers are either used as a generic name (state)
   ! in some routines
@@ -44,6 +45,7 @@ contains
     allocate(state1(sx-mbc:ex+mbc,sy-mbc:ey+mbc,sz-mbc:ez+mbc,neq))
     allocate(state2(sx-mbc:ex+mbc,sy-mbc:ey+mbc,sz-mbc:ez+mbc,neq))
     allocate(pressr(sx-mbc:ex+mbc,sy-mbc:ey+mbc,sz-mbc:ez+mbc))
+    allocate(gforce(sx-mbc:ex+mbc,sy-mbc:ey+mbc,sz-mbc:ez+mbc,nrOfDim))
     
     ! point stnew to state2
     stold => state1

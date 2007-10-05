@@ -53,6 +53,13 @@ contains
     !stold(:,:,:,neq)=0.0d0
     !stnew(:,:,:,neq)=0.0d0
 
+
+    ! Do gravitational step
+    call apply_grav_force(0.5*dt,OLD)
+    ! exchange boundaries with neighbours
+    ! This routine also calculates the new pressure
+    call exchngxy(OLD)
+
     ! Take one time step Strang splitting
     ! Alternate the order between time steps
     instep=ran123()
@@ -143,6 +150,12 @@ contains
           endif
        endif istoptest
     enddo
+
+    ! Do gravitational step
+    call apply_grav_force(0.5*dt,OLD)
+    ! exchange boundaries with neighbours
+    ! This routine also calculates the new pressure
+    call exchngxy(OLD)
 
     if (istop == 0) then ! otherwise serious error occurred
        ! Point generic state array to stold (the newest at this point)
