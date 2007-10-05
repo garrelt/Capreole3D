@@ -212,4 +212,15 @@ contains
 
   end subroutine inflow
   
+  !==========================================================================
+
+  subroutine apply_grav_force(dt,newold)
+
+    ! Dummy routine
+
+    real(kind=dp),intent(in) :: dt
+    integer,intent(in) :: newold
+
+  end subroutine apply_grav_force
+    
 end module problem
