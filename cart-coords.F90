@@ -68,16 +68,17 @@ contains
     allocate(x(sx-mbc:ex+mbc))
     allocate(y(sy-mbc:ey+mbc))
     allocate(z(sz-mbc:ez+mbc))
-    allocate(volx(sx-mbc:ex+mbc,sy-mbc:ey+mbc,sz-mbc:ez+mbc))
-    allocate(voly(sx-mbc:ex+mbc,sy-mbc:ey+mbc,sz-mbc:ez+mbc))
-    allocate(volz(sx-mbc:ex+mbc,sy-mbc:ey+mbc,sz-mbc:ez+mbc))
+    ! Not used in cartesian case
+    !allocate(volx(sx-mbc:ex+mbc,sy-mbc:ey+mbc,sz-mbc:ez+mbc))
+    !allocate(voly(sx-mbc:ex+mbc,sy-mbc:ey+mbc,sz-mbc:ez+mbc))
+    !allocate(volz(sx-mbc:ex+mbc,sy-mbc:ey+mbc,sz-mbc:ez+mbc))
     
     ! point generic volume variable to volx
     vol => volx
 
   end subroutine init_grid
 
-  subroutine init_coords (restart)
+  subroutine init_coords (restart,restartfile)
     
     ! This routine initializes the coordinate variables
     
@@ -86,14 +87,13 @@ contains
     ! Case: cartesian coordinates (x,y,z)
     
     logical,intent(in) :: restart
+    character(len=19),intent(in) :: restartfile
 
     integer :: i,j,k
     character(len=10) :: str_length_unit
     real(kind=dp) :: conversion_factor
 
-#ifdef MPI
     integer :: ierror
-#endif
 
     if (.not.restart) then ! Fresh start
        
@@ -105,11 +105,6 @@ contains
           read (unit=stdinput,fmt=*) xlength,ylength,zlength,str_length_unit
           write (unit=30,fmt="(a,3(e10.3),a)") "2) Size of grid box : ", &
                xlength,ylength,zlength,str_length_unit
-          ! Record variables which remain constant during a run in a file
-          ! runparams to be used at restarts
-          open(unit=80,file="runparams",status="unknown",form="unformatted",&
-               action="write")
-          write(unit=80) xlength,ylength,zlength
           ! Convert to cms
           call convert_case(str_length_unit,0) ! conversion to lower case
           select case (trim(adjustl(str_length_unit)))
@@ -134,11 +129,11 @@ contains
           zlength=zlength*conversion_factor
        endif
     else
-       open(unit=80,file="runparams",status="old",form="unformatted", &
-            action="write")
-       read(unit=80) xlength,ylength,zlength
+       ! Ask for the input if you are processor 0.
+       if (rank == 0) then
+          call restart_grid(restartfile,xlength,ylength,zlength,ierror)
+       endif
     endif
-
 
 #ifdef MPI
     ! Distribute the input parameters to the other nodes
@@ -177,15 +172,15 @@ contains
     ! For higher accuracy define separate volumes for x and y
     ! This is not used in the cylindrical version
     
-    do k=sz-mbc,ez+mbc
-       do j=sy-mbc,ey+mbc
-          do i=sx-mbc,ex+mbc
-             volx(i,j,k)=1.0_dp
-             voly(i,j,k)=1.0_dp
-             volz(i,j,k)=1.0_dp
-          enddo
-       enddo
-    enddo
+    !do k=sz-mbc,ez+mbc
+    !   do j=sy-mbc,ey+mbc
+    !      do i=sx-mbc,ex+mbc
+    !         volx(i,j,k)=1.0_dp
+    !         voly(i,j,k)=1.0_dp
+    !         volz(i,j,k)=1.0_dp
+    !      enddo
+    !   enddo
+    !enddo
 
     ! These are edge factors which are fed to the solver
     ! in [xyz]integrate. If the boundary is a singularity,
@@ -198,5 +193,80 @@ contains
     zedge(1:2)=1.0
 
   end subroutine init_coords
+
+  !========================================================================
+  subroutine restart_grid(filename,xgrid,ygrid,zgrid,ierror)
+    
+    ! This routine constructs the physical size of the grid
+    ! (xgrid,ygrid,zgrid) from the ah3 file filename.
+    ! Should be called from module coords
+
+    use atomic, only: gamma
+
+    character(len=19),intent(in) :: filename ! name of ah3 file
+    real(kind=dp),intent(out)    :: xgrid,ygrid,zgrid ! 3D size of grid
+    integer,intent(out) :: ierror
+
+    ! AH3D header variables
+    character(len=80) :: banner
+    integer :: nrOfDim_in ! corresponds to parameter nrOfDim (no. of dimensions)
+    integer :: neq_in     ! corresponds to parameter neq (no. of equations)
+    integer :: npr_in     ! corresponds to parameter npr (no. of processors)
+    integer :: refinementFactor ! not used
+    integer :: nframe           ! output counter
+    real(kind=dp) :: gamma_in  ! corresponds to parameter gamma (adiab. index)
+    real(kind=dp) :: time      ! output time
+
+    ! AH3D grid variables
+    integer :: igrid ! counters
+    integer :: xmesh,ymesh,zmesh 
+    real(kind=dp) :: x_corner,y_corner,z_corner
+    real(kind=dp) :: dx_in,dy_in,dz_in
+    integer :: level
+
+    ierror=0
+    
+    ! Read in header
+    if (rank.eq.0) then
+       open(unit=40,file=filename,form='UNFORMATTED',status='old')
+       read(40) banner
+       read(40) nrOfDim_in
+       read(40) neq_in
+       read(40) npr_in
+       read(40) refinementFactor
+       read(40) nframe
+       read(40) gamma_in
+       read(40) time
+       
+       ! Check for consistency
+       if (nrOfDim_in /= nrOfDim .or. neq_in /= neq .or. npr_in /= npr .or. &
+            gamma_in /= gamma ) then
+          ierror=1
+          write(*,*) "Error: ah3 file inconsistent with program parameters"
+       endif
+       
+       if (ierror == 0) then
+          ! Read in grids
+          ! (each processor has its grid, we read in all and find the
+          !  largest value to obtain the physical size of the full grid).
+          xgrid=0.0
+          ygrid=0.0
+          zgrid=0.0
+          do igrid=1,npr_in
+             read(40) xmesh,ymesh,zmesh
+             read(40) x_corner,y_corner,z_corner
+             read(40) dx_in,dy_in,dz_in
+             read(40) level
+             xgrid=max(xgrid,x_corner+dx_in*(real(xmesh)-0.5))
+             ygrid=max(ygrid,y_corner+dy_in*(real(ymesh)-0.5))
+             zgrid=max(zgrid,z_corner+dz_in*(real(zmesh)-0.5))
+          enddo
+       endif
+
+       close(40)
+
+    endif
+    
+  end subroutine restart_grid
 
 end module grid

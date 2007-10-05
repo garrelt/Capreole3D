@@ -11,8 +11,12 @@ module mesh
   !
   ! 3D version
 
+  use precision, only: dp
   use my_mpi
   use file_admin, only: stdinput
+
+  implicit none
+
   private
 
   integer,public :: meshx,meshy,meshz ! total grid size in x, y, z
@@ -24,21 +28,33 @@ contains
 
   !----------------------------------------------------------------------------
 
-  subroutine init_mesh ()
+  subroutine init_mesh (restart,restartfile)
     ! Read in the grid dimensions, and distribute them over the
     ! processors
 
+    logical,intent(in) :: restart
+    character(len=19),intent(in) :: restartfile
+
     integer :: ierror=0
 
-    if (rank == 0) then
-       print "(2/,A,/)", "----- Grid -----"
-       write(unit=*,fmt="(a)",advance="no") "1) Number of grid points: "
-       read (unit=stdinput,fmt=*) meshx,meshy,meshz
+    if (.not.restart) then ! Fresh start
+       
+       if (rank == 0) then
+          print "(2/,A,/)", "----- Grid -----"
+          write(unit=*,fmt="(a)",advance="no") "1) Number of grid points: "
+          read (unit=stdinput,fmt=*) meshx,meshy,meshz
+          
+          ! Report
+          write(unit=30,fmt="(2/,A,/)") "----- Grid -----"
+          write(unit=30,fmt="(A,3I5)") "1) Number of grid points: ", &
+               meshx,meshy,meshz
+       endif
 
-    ! Report
-       write(unit=30,fmt="(2/,A,/)") "----- Grid -----"
-       write(unit=30,fmt="(A,3I5)") "1) Number of grid points: ", &
-            meshx,meshy,meshz
+    else
+       ! Ask for the input if you are processor 0.
+       if (rank == 0) then
+          call restart_mesh(restartfile,meshx,meshy,meshz,ierror)
+       endif
     endif
 
 #ifdef MPI
@@ -59,6 +75,70 @@ contains
     write(unit=30,fmt=*) "Grid: ",sx,ex,sy,ey,sz,ez
     
   end subroutine init_mesh
+
+  !========================================================================
+  subroutine restart_mesh(filename,xmesh,ymesh,zmesh,ierror)
+    
+    ! This routine retrieved the mesh size
+    ! (xmesh,ymesh,zmesh) from the ah3 file filename.
+    ! Should be called from module mesh
+
+    use sizes, only: nrOfDim, neq
+    use atomic, only: gamma
+
+    character(len=19),intent(in) :: filename ! name of ah3 file
+    integer,intent(out)    :: xmesh,ymesh,zmesh ! 3D size of mesh
+    integer,intent(out) :: ierror
+
+    ! AH3D header variables
+    character(len=80) :: banner
+    integer :: nrOfDim_in ! corresponds to parameter nrOfDim (no. of dimensions)
+    integer :: neq_in     ! corresponds to parameter neq (no. of equations)
+    integer :: npr_in     ! corresponds to parameter npr (no. of processors)
+    integer :: refinementFactor ! not used
+    integer :: nframe           ! output counter
+    real(kind=dp) :: gamma_in  ! corresponds to parameter gamma (adiab. index)
+    real(kind=dp) :: time      ! output time
+
+    ! AH3D grid variables
+    integer :: igrid ! counters
+    real(kind=dp) :: x_corner,y_corner,z_corner
+    real(kind=dp) :: dx_in,dy_in,dz_in
+    integer :: level
+
+    ierror=0
+    
+    ! Read in header
+    if (rank.eq.0) then
+       open(unit=40,file=filename,form='UNFORMATTED',status='old')
+       read(40) banner
+       read(40) nrOfDim_in
+       read(40) neq_in
+       read(40) npr_in
+       read(40) refinementFactor
+       read(40) nframe
+       read(40) gamma_in
+       read(40) time
+       
+       ! Check for consistency
+       if (nrOfDim_in /= nrOfDim .or. neq_in /= neq .or. npr_in /= npr .or. &
+            gamma_in /= gamma ) then
+          ierror=1
+          write(*,*) "Error: ah3 file inconsistent with program parameters"
+       endif
+       
+       if (ierror == 0) then
+          ! Read in grids
+          ! (each processor has its grid, we read in all and find the
+          !  largest value to obtain the physical size of the full grid).
+          read(40) xmesh,ymesh,zmesh
+       endif
+
+       close(40)
+
+    endif
+    
+  end subroutine restart_mesh
 
   !----------------------------------------------------------------------------
 
