@@ -58,7 +58,7 @@ module hydrosolver
   real(kind=dp),dimension(:),allocatable,public :: wp 
   ! dstate will contain the state changes:
   real(kind=dp),dimension(:,:),allocatable,public :: dstate
-  
+  !$OMP THREADPRIVATE(state1d,wp,dstate)  
 
   ! The following variables are private since they are only
   ! needed inside the solver.
@@ -69,13 +69,15 @@ module hydrosolver
   real(kind=dp),dimension(:,:),allocatable :: fluxr ! right flux at i-1/2
   real(kind=dp),dimension(:,:),allocatable :: fludif ! flux difference at i-1/2
   real(kind=dp),dimension(:,:),allocatable :: stadif ! state difference at i-1/2
-  
+  !$OMP THREADPRIVATE(w,fluxc,fluxl,fluxr,fludif,stadif)
+
   real(kind=dp),dimension(:),allocatable :: rrt  ! 1/rho average
   real(kind=dp),dimension(:,:),allocatable :: vt ! roe average velocity 2
   real(kind=dp),dimension(:),allocatable :: ht ! roe average enthalpy
   real(kind=dp),dimension(:),allocatable :: absvt  ! absolute velocity
   real(kind=dp),dimension(:),allocatable :: vst2    ! sound speed squared
   real(kind=dp),dimension(:),allocatable :: vst   ! sound speed
+  !$OMP THREADPRIVATE(rrt,vt,ht,absvt,vst2,vst)
   
   real(kind=dp),dimension(:,:),allocatable :: eiglam ! eigen values/characteristics
   real(kind=dp),dimension(:,:),allocatable :: sgn ! sign of eigenvalues
@@ -88,6 +90,7 @@ module hydrosolver
   real(kind=dp),dimension(:,:,:),allocatable :: wave
   real(kind=dp),dimension(:,:,:),allocatable :: adq
   real(kind=dp),dimension(:,:),allocatable :: flux  ! 2nd order correction
+  !$OMP THREADPRIVATE(eiglam,sgn,eigv,uvdif,a,wave,adq,flux)
 
   public :: constr_solver, destr_solver, solver
   

@@ -9,12 +9,14 @@ LDR     = $(F90)
 #PP = cpp -P
 
 # F90 options
-IFORTFLAGS = -xW -O3 -vec_report -u -ipo -fpe0
+IFORTFLAGS = -xW -O3 -vec_report -u -ipo -fpe0 -DIFORT
+#IFORTFLAGS = -xW -O3 -u -ipo -fpe0
 #IFORTFLAGS = -assume 2underscores -xW -O3 -vec_report -u -ipo -fpe0
-#F90FLAGS = -O3 -cpu:opteron #-DMPI
-#F90FLAGS = -keep -Wv,-Pprocs,1 -O3 -cpu:opteron #-DMPI
-F90FLAGS = $(IFORTFLAGS)
+F90FLAGS = $(IFORTFLAGS) -openmp -DOPENMP
 #F90FLAGS = $(IFORTFLAGS) -DMPI 
+
+#ABSOFTF90FLAGS = -O3 -cpu:opteron #-DMPI
+#ABSOFTF90FLAGS = -keep -Wv,-Pprocs,1 -O3 -cpu:opteron #-DMPI
 
 OPTIONS = $(F90FLAGS)
 

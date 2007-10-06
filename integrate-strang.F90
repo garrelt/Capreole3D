@@ -188,15 +188,17 @@ contains
 
     mesh=ex-sx+1     ! the size of the y row
     ioff=sx-1        ! offset between grid and y rows
+    !$omp parallel default(shared) private(ij,ik,k,j,i,ieq,ierror)
     call constr_solver(mesh)
 
-    ! remap to 1D state variable running from 1-mbc to ex-sx+1+mbc
+    !$omp do schedule (dynamic,1) REDUCTION(+: itoterror)
     kloop: do k=sz,ez
        jloop :do j=sy,ey  ! integrate over all rows 
           
           ij=j             ! to export the current j position
           ik=k             ! to export the current k position
           
+          ! remap to 1D state variable running from 1-mbc to ex-sx+1+mbc
           ! Calculate volume weighted state and pressure
           do i=1-mbc,mesh+mbc
              state1d(i,1:neq)=stold(i+ioff,j,k,1:neq)
@@ -222,9 +224,11 @@ contains
 
        enddo jloop
     enddo kloop
+    !$omp end do
     
     ! Destroy solver variables
     call destr_solver()
+    !$omp end parallel
 
   end subroutine xintegr
 
@@ -244,8 +248,10 @@ contains
     ! remap to 1D state variable running from 1-mbc to ey-sy+1+mbc      
     mesh=ey-sy+1    ! size of the y row
     joff=sy-1       ! offset between grid and row
+    !$omp parallel default(shared) private(ij,ik,k,j,i,ieq,ierror)
     call constr_solver(mesh)
     
+    !$omp do schedule (dynamic,1) REDUCTION(+: itoterror)
     kloop: do k=sz,ez
        iloop: do i=sx,ex      ! integrate over all rows 
           
@@ -277,9 +283,11 @@ contains
 
        enddo iloop
     enddo kloop
+    !$omp end do
     
     ! Destroy solver variables
     call destr_solver()
+    !$omp end parallel
     
   end subroutine yintegr
 
@@ -299,8 +307,10 @@ contains
     ! remap to 1D state variable running from 1-mbc to ez-sz+1+mbc      
     mesh=ez-sz+1    ! size of the x row
     koff=sz-1       ! offset between grid and row
+    !$omp parallel default(shared) private(ij,ik,k,j,i,ieq,ierror)
     call constr_solver(mesh)
 
+    !$omp do schedule (dynamic,1) REDUCTION(+: itoterror)
     jloop: do j=sy,ey
        iloop: do i=sx,ex      ! integrate over all rows 
           
@@ -332,9 +342,11 @@ contains
 
        enddo iloop
     enddo jloop
+    !$omp end do
     
     ! Destroy solver variables
     call destr_solver()
+    !$omp end parallel
 
   end subroutine zintegr
 
