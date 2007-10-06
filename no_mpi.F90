@@ -10,15 +10,26 @@ module my_mpi
   !
   !----------------------------------------------------------------------------
   
+#ifdef XLF
+  USE XLFUTILITY, only: hostnm => hostnm_ , flush => flush_
+#endif
 
-  !implicit none
+#ifdef IFORT
+  USE IFPORT, only: hostnm, flush
+#endif
 
-  !private
+#if defined IFORT && defined OPENMP 
+  USE OMP_LIB, only: omp_get_num_threads, omp_get_thread_num
+#endif
+  use file_admin, only: log_unit
+
+  implicit none
 
   integer,parameter,public :: NPDIM=3 ! dimension of problem
 
   integer,public :: rank              ! rank of the processor
   integer,public :: npr               ! number of processors
+  integer,public :: nthreads        ! number of threads (per processor)
   integer,public :: MPI_COMM_NEW      ! the (new) communicator
   integer,dimension(NPDIM),public :: dims ! number of processors in 
                                              !  each dimension
@@ -40,7 +51,8 @@ contains
     character(len=10) :: filename        ! name of the log file
     character(len=4) :: number
     integer :: ierror
-    integer :: hostnm
+    integer :: tn
+    !integer :: hostnm
     character(len=100) :: hostname
 
     call mpi_basic ()
@@ -48,14 +60,42 @@ contains
     ! Open processor dependent log file
     write(unit=number,fmt="(I4)") rank
     filename=trim(adjustl("log."//trim(adjustl(number))))
-    open(unit=30,file=filename,status="unknown",action="write")
+    open(unit=log_unit,file=filename,status="unknown",action="write")
 
-    write(unit=30,fmt=*) "Log file for rank ",rank
+    write(unit=log_unit,fmt=*) "Log file for rank ",rank
+
+#ifdef OPENMP
+    !$omp parallel default(shared)
+    nthreads=omp_get_num_threads()
+    !$omp end parallel
+    write(log_unit,*) ' Number of OpenMP threads is ',nthreads
+
+    ! Figure out hostname
+    ! NOTE: compiler dependent!!!
+    !$omp parallel default(shared)
+    tn=omp_get_thread_num()+1
+    ierror=hostnm(hostname)
+    if (ierror == 0) then
+       write(log_unit,*) &
+            'Thread number ',tn,' running on Processor ',hostname
+    else 
+       write(log_unit,*) &
+            'Error establishing identity of processor for thread ',tn
+    endif
+    !$omp end parallel
+#else
     ! Figure out hostname
     ! NOTE: compiler dependent!!!
     ierror=hostnm(hostname)
-    write(unit=30,fmt=*) "The Processor is ",hostname
-    call flush(30)
+    if (ierror == 0) then
+       write(unit=log_unit,fmt=*) "The Processor is ",hostname
+    else 
+       write(log_unit,*) &
+            'Error establishing identity of processor for this rank'
+    endif
+#endif
+
+    call flush(log_unit)
 
     call mpi_topology ()
 
@@ -98,7 +138,7 @@ contains
   subroutine mpi_end ( )
 
     ! Close log file
-    close(30)
+    close(log_unit)
 
   end subroutine mpi_end
 
