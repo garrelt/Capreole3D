@@ -149,106 +149,51 @@ contains
     ! double rho*e
     ! [double var(nrOfVars-(2+nrOfDim))]
 
-    if (rank.eq.0) then
-       ! Header
-       open(unit=ah3,file=filename,form='UNFORMATTED')
-       write(ah3) banner
-       write(ah3) nrOfDim
-       write(ah3) neq
-       write(ah3) npr
-       write(ah3) refinementFactor
-       write(ah3) nframe
-       write(ah3) gamma
-       write(ah3) time*sctime
-       close(ah3)
-    endif
-
-    if (rank.eq.0) then
-
-       ! First ring: Grid 
-       open(unit=ah3,file=filename,form='UNFORMATTED',status='OLD', &
-               position='APPEND')
-       write(ah3) ex-sx+1,ey-sy+1,ez-sz+1
-       write(ah3) x(sx)*scleng,y(sy)*scleng,z(sz)*scleng
-       write(ah3) dx*scleng,dy*scleng,dz*scleng
-       write(ah3) level
-       close(ah3)
-       
+    if (rank.eq.0) &
+         open(unit=ah3,file=filename,form='UNFORMATTED',status='NEW', &
+         IOSTAT=ierror)
 #ifdef MPI
-       ! Send filename to next processor
-       if (npr > 1) then
-          call MPI_ISSEND(filename,19,MPI_CHARACTER,rank+1,outputcircle, &
-               MPI_COMM_NEW,request,mpi_ierror)
-          write(log_unit,*) rank,'sent filename to ',rank+1
-          ! Wait for the circle to complete
-          call MPI_RECV(filename,19,MPI_CHARACTER,npr-1,outputcircle, &
-               MPI_COMM_NEW,status,mpi_ierror)
-          write(log_unit,*) rank,'received filename from ',npr-1
-       endif
-#endif
-
-       ! Second ring: Cell data
-       open(unit=ah3,file=filename,form='UNFORMATTED',status='OLD', &
-            position='APPEND')
-       write(ah3) (((state(i,j,k,RHO)*scdens,i=sx,ex),j=sy,ey),k=sz,ez)
-       write(ah3) (((state(i,j,k,RHVX)*scmome,i=sx,ex),j=sy,ey),k=sz,ez)
-       write(ah3) (((state(i,j,k,RHVY)*scmome,i=sx,ex),j=sy,ey),k=sz,ez)
-       write(ah3) (((state(i,j,k,RHVZ)*scmome,i=sx,ex),j=sy,ey),k=sz,ez)
-       write(ah3) (((state(i,j,k,EN)*scener,i=sx,ex),j=sy,ey),k=sz,ez)
-       if (neq > neuler) then
-          write(ah3) ((((state(i,j,k,ieq),i=sx,ex),j=sy,ey),k=sz,ez), &
-               ieq=neuler+1,neq)
-       endif
-       close(ah3)
-       ! Send filename to next processor
-#ifdef MPI
-       if (npr > 1) then
-          call MPI_ISSEND(filename,19,MPI_CHARACTER,rank+1,outputcircle, &
-               MPI_COMM_NEW,request,mpi_ierror)
-          write(log_unit,*) rank,'sent filename to ',rank+1
-          ! Wait for the circle to complete
-          call MPI_RECV(filename,19,MPI_CHARACTER,npr-1,outputcircle, &
-               MPI_COMM_NEW,status,mpi_ierror)
-          write(log_unit,*) rank,'received filename from ',npr-1,' end of loop.'
-       endif
-#endif
-#ifdef MPI
-    else
-       
-       ! First ring: Grids
-       ! Receive filename from previous processor
-       call MPI_RECV(filename,19,MPI_CHARACTER,rank-1,outputcircle, &
-            MPI_COMM_NEW,status,mpi_ierror)
-       write(log_unit,*) rank,'received filename from ',rank-1
-       
-       if (ierror == 0) then ! if ok
+    ! Distribute runid over nodes
+    call MPI_BCAST(ierror,1,MPI_INTEGER,0,MPI_COMM_NEW,mpi_ierror)
+#endif     
+    errortest: if (ierror == 0) then
+       ranktest: if (rank == 0) then
+          ! Header
+          write(ah3) banner
+          write(ah3) nrOfDim
+          write(ah3) neq
+          write(ah3) npr
+          write(ah3) refinementFactor
+          write(ah3) nframe
+          write(ah3) gamma
+          write(ah3) time*sctime
+          close(ah3)
+          
+          ! First ring: Grid 
           open(unit=ah3,file=filename,form='UNFORMATTED',status='OLD', &
                position='APPEND')
-          ! Grid 
           write(ah3) ex-sx+1,ey-sy+1,ez-sz+1
           write(ah3) x(sx)*scleng,y(sy)*scleng,z(sz)*scleng
           write(ah3) dx*scleng,dy*scleng,dz*scleng
           write(ah3) level
           close(ah3)
           
-          ! Determine next processor (npr -> 0)
-          nextproc=mod(rank+1,npr)
-          ! Send filename along
-          call MPI_ISSEND(filename,19,MPI_CHARACTER,nextproc, &
-               outputcircle,MPI_COMM_NEW,request,mpi_ierror)
-          write(log_unit,*) rank,'sent filename to ',nextproc
-       endif
-
-       ! Second ring: Cells
-       ! Receive filename from previous processor
-       call MPI_RECV(filename,19,MPI_CHARACTER,rank-1,outputcircle, &
-            MPI_COMM_NEW,status,mpi_ierror)
-       write(log_unit,*) rank,'received filename from ',rank-1
+#ifdef MPI
+          ! Send filename to next processor
+          if (npr > 1) then
+             call MPI_ISSEND(filename,19,MPI_CHARACTER,rank+1,outputcircle, &
+                  MPI_COMM_NEW,request,mpi_ierror)
+             write(log_unit,*) rank,'sent filename to ',rank+1
+             ! Wait for the circle to complete
+             call MPI_RECV(filename,19,MPI_CHARACTER,npr-1,outputcircle, &
+                  MPI_COMM_NEW,status,mpi_ierror)
+             write(log_unit,*) rank,'received filename from ',npr-1
+          endif
+#endif
           
-       if (ierror == 0) then ! if ok
+          ! Second ring: Cell data
           open(unit=ah3,file=filename,form='UNFORMATTED',status='OLD', &
                position='APPEND')
-          ! Cells
           write(ah3) (((state(i,j,k,RHO)*scdens,i=sx,ex),j=sy,ey),k=sz,ez)
           write(ah3) (((state(i,j,k,RHVX)*scmome,i=sx,ex),j=sy,ey),k=sz,ez)
           write(ah3) (((state(i,j,k,RHVY)*scmome,i=sx,ex),j=sy,ey),k=sz,ez)
@@ -259,20 +204,82 @@ contains
                   ieq=neuler+1,neq)
           endif
           close(ah3)
-          
-          ! Determine next processor (npr -> 0)
-          nextproc=mod(rank+1,npr)
-          ! Send filename along
-          call MPI_ISSEND(filename,19,MPI_CHARACTER,nextproc, &
-               outputcircle,MPI_COMM_NEW,request,mpi_ierror)
-          write(log_unit,*) rank,'sent filename to ',nextproc
-       else
-          write(log_unit,*) 'MPI error in output routine'
-          ierror=ierror+1
-       endif
+          ! Send filename to next processor
+#ifdef MPI
+          if (npr > 1) then
+             call MPI_ISSEND(filename,19,MPI_CHARACTER,rank+1,outputcircle, &
+                  MPI_COMM_NEW,request,mpi_ierror)
+             write(log_unit,*) rank,'sent filename to ',rank+1
+             ! Wait for the circle to complete
+             call MPI_RECV(filename,19,MPI_CHARACTER,npr-1,outputcircle, &
+                  MPI_COMM_NEW,status,mpi_ierror)
+             write(log_unit,*) rank,'received filename from ',npr-1,' end of loop.'
+          endif
 #endif
-    endif
-
+#ifdef MPI
+       else
+          
+          ! First ring: Grids
+          ! Receive filename from previous processor
+          call MPI_RECV(filename,19,MPI_CHARACTER,rank-1,outputcircle, &
+               MPI_COMM_NEW,status,mpi_ierror)
+          write(log_unit,*) rank,'received filename from ',rank-1
+          
+          if (mpi_ierror == 0) then ! if ok
+             open(unit=ah3,file=filename,form='UNFORMATTED',status='OLD', &
+                  position='APPEND')
+             ! Grid 
+             write(ah3) ex-sx+1,ey-sy+1,ez-sz+1
+             write(ah3) x(sx)*scleng,y(sy)*scleng,z(sz)*scleng
+             write(ah3) dx*scleng,dy*scleng,dz*scleng
+             write(ah3) level
+             close(ah3)
+             
+             ! Determine next processor (npr -> 0)
+             nextproc=mod(rank+1,npr)
+             ! Send filename along
+             call MPI_ISSEND(filename,19,MPI_CHARACTER,nextproc, &
+                  outputcircle,MPI_COMM_NEW,request,mpi_ierror)
+             write(log_unit,*) rank,'sent filename to ',nextproc
+          endif
+          
+          ! Second ring: Cells
+          ! Receive filename from previous processor
+          call MPI_RECV(filename,19,MPI_CHARACTER,rank-1,outputcircle, &
+               MPI_COMM_NEW,status,mpi_ierror)
+          write(log_unit,*) rank,'received filename from ',rank-1
+          
+          if (mpi_ierror == 0) then ! if ok
+             open(unit=ah3,file=filename,form='UNFORMATTED',status='OLD', &
+                  position='APPEND')
+             ! Cells
+             write(ah3) (((state(i,j,k,RHO)*scdens,i=sx,ex),j=sy,ey),k=sz,ez)
+             write(ah3) (((state(i,j,k,RHVX)*scmome,i=sx,ex),j=sy,ey),k=sz,ez)
+             write(ah3) (((state(i,j,k,RHVY)*scmome,i=sx,ex),j=sy,ey),k=sz,ez)
+             write(ah3) (((state(i,j,k,RHVZ)*scmome,i=sx,ex),j=sy,ey),k=sz,ez)
+             write(ah3) (((state(i,j,k,EN)*scener,i=sx,ex),j=sy,ey),k=sz,ez)
+             if (neq > neuler) then
+                write(ah3) ((((state(i,j,k,ieq),i=sx,ex),j=sy,ey),k=sz,ez), &
+                     ieq=neuler+1,neq)
+             endif
+             close(ah3)
+             
+             ! Determine next processor (npr -> 0)
+             nextproc=mod(rank+1,npr)
+             ! Send filename along
+             call MPI_ISSEND(filename,19,MPI_CHARACTER,nextproc, &
+                  outputcircle,MPI_COMM_NEW,request,mpi_ierror)
+             write(log_unit,*) rank,'sent filename to ',nextproc
+          else
+             write(log_unit,*) 'MPI error in output routine'
+             ierror=ierror+1
+          endif
+#endif
+       endif ranktest
+    else
+       write(log_unit,*) 'Error opening output file, continuing without writing.'
+    endif errortest
+    
   end subroutine make_output
   
 end module output
