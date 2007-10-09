@@ -72,7 +72,7 @@ contains
 
     ! Figure out hostname
     ! NOTE: compiler dependent!!!
-    !$omp parallel default(shared)
+    !$omp parallel default(shared) private(tn,ierror,hostname)
     tn=omp_get_thread_num()+1
     ierror=hostnm(hostname)
     if (ierror == 0) then
