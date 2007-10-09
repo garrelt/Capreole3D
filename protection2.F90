@@ -163,18 +163,18 @@ contains
     enddo
     
     do nproblem=1,problem_counter
-       write(30,*) 
+       !write(30,*) 
        ! Apply fluxes
        i=problem_list(nproblem)%position(1)
        j=problem_list(nproblem)%position(2)
        k=problem_list(nproblem)%position(3)
-       write(30,'(A,5(1pe10.3))') 'Old: ',state(i,j,k,1:neuler)
-       write(30,'(A,5(1pe10.3))') ' ',state(i-1,j,k,1:neuler)
-       write(30,'(A,5(1pe10.3))') ' ',state(i+1,j,k,1:neuler)
-       write(30,'(A,5(1pe10.3))') ' ',state(i,j-1,k,1:neuler)
-       write(30,'(A,5(1pe10.3))') ' ',state(i,j+1,k,1:neuler)
-       write(30,'(A,5(1pe10.3))') ' ',state(i,j,k-1,1:neuler)
-       write(30,'(A,5(1pe10.3))') ' ',state(i,j,k+1,1:neuler)
+       !write(30,'(A,5(1pe10.3))') 'Old: ',state(i,j,k,1:neuler)
+       !write(30,'(A,5(1pe10.3))') ' ',state(i-1,j,k,1:neuler)
+       !write(30,'(A,5(1pe10.3))') ' ',state(i+1,j,k,1:neuler)
+       !write(30,'(A,5(1pe10.3))') ' ',state(i,j-1,k,1:neuler)
+       !write(30,'(A,5(1pe10.3))') ' ',state(i,j+1,k,1:neuler)
+       !write(30,'(A,5(1pe10.3))') ' ',state(i,j,k-1,1:neuler)
+       !write(30,'(A,5(1pe10.3))') ' ',state(i,j,k+1,1:neuler)
        state(i,j,k,:)=state(i,j,k,:)+eta* &
             (problem_list(nproblem)%dflux(1,1,:)- &
             problem_list(nproblem)%dflux(2,1,:) + &
@@ -194,13 +194,13 @@ contains
             problem_list(nproblem)%dflux(1,3,:)
        if (k < meshz) state(i,j,k+1,:)=state(i,j,k+1,:)+eta* &
             problem_list(nproblem)%dflux(2,3,:)
-       write(30,'(A,5(1pe10.3))') 'New: ',state(i,j,k,1:neuler)
-       write(30,'(A,5(1pe10.3))') ' ',state(i-1,j,k,1:neuler)
-       write(30,'(A,5(1pe10.3))') ' ',state(i+1,j,k,1:neuler)
-       write(30,'(A,5(1pe10.3))') ' ',state(i,j-1,k,1:neuler)
-       write(30,'(A,5(1pe10.3))') ' ',state(i,j+1,k,1:neuler)
-       write(30,'(A,5(1pe10.3))') ' ',state(i,j,k-1,1:neuler)
-       write(30,'(A,5(1pe10.3))') ' ',state(i,j,k+1,1:neuler)
+       !write(30,'(A,5(1pe10.3))') 'New: ',state(i,j,k,1:neuler)
+       !write(30,'(A,5(1pe10.3))') ' ',state(i-1,j,k,1:neuler)
+       !write(30,'(A,5(1pe10.3))') ' ',state(i+1,j,k,1:neuler)
+       !write(30,'(A,5(1pe10.3))') ' ',state(i,j-1,k,1:neuler)
+       !write(30,'(A,5(1pe10.3))') ' ',state(i,j+1,k,1:neuler)
+       !write(30,'(A,5(1pe10.3))') ' ',state(i,j,k-1,1:neuler)
+       !write(30,'(A,5(1pe10.3))') ' ',state(i,j,k+1,1:neuler)
     enddo
 
     if (problem_counter > 0) then
