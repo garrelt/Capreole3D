@@ -41,7 +41,7 @@ Program Capreole
   !----------------------------------------------------------------------------
 
   use my_mpi
-  use file_admin, only: stdinput
+  use file_admin, only: stdinput, log_unit
   use mesh
   use output
   use grid
@@ -54,6 +54,7 @@ Program Capreole
 
   ! Start and end time for CPU report
   real :: tstart,tend
+  integer :: cntr1,cntr2,countspersec
 
   ! Restart
   logical :: restart!=.false.
@@ -73,6 +74,9 @@ Program Capreole
 
   ! Initialize cpu timer
   call cpu_time(tstart)
+
+  ! Initialize wall cock times
+  call system_clock(cntr1)
 
   ! Set up MPI structure
   call mpi_setup()
@@ -129,8 +133,11 @@ Program Capreole
 
   ! Find out CPU time
   call cpu_time(tend)
+  call system_clock(cntr2,countspersec)
 
-  write(*,*) 'CPU time: ',tend-tstart,' s'
+  write(log_unit,*) 'CPU time: ',tend-tstart,' s'
+  write(log_unit,*) 'Wall clock time: ',(cntr2-cntr1)/countspersec,' s'
+
 
 end Program Capreole
 
