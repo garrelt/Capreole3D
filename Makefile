@@ -9,10 +9,12 @@ LDR     = $(F90)
 #PP = cpp -P
 
 # F90 options
-IFORTFLAGS = -xW -O3 -vec_report -u -ipo -fpe0 -DIFORT
+#IFORTFLAGS = -xW -O3 -vec_report -u -ipo -fpe0 -DIFORT
+IFORTFLAGS = -xW -O3 -vec_report -u -ipo -DIFORT
 #IFORTFLAGS = -xW -O3 -u -ipo -fpe0
 #IFORTFLAGS = -assume 2underscores -xW -O3 -vec_report -u -ipo -fpe0
-F90FLAGS = $(IFORTFLAGS) -openmp -DOPENMP
+F90FLAGS = $(IFORTFLAGS)
+#F90FLAGS = -openmp -DOPENMP $(IFORTFLAGS)
 #F90FLAGS = $(IFORTFLAGS) -DMPI 
 
 #ABSOFTF90FLAGS = -O3 -cpu:opteron #-DMPI
@@ -108,6 +110,7 @@ HMCOOLING = cooling_hm.o
 RT-3D_BASIC = romberg.o tped.o radiation.o clumping.o doric.o thermal.o 
 RT-3D_BASIC_ME = romberg.o tped.o radiation_me.o clumping.o doric.o thermal.o 
 RT-3D = $(RT-3D_BASIC) sourceprops.o ionic.o
+RT-3D_OMP = $(RT-3D_BASIC) sourceprops.o ionic_openmp.o
 RT-3D-PP = $(RT-3D_BASIC) sourceprops_pp.o ionic_pp.o
 RT-3D-PP_ME = $(RT-3D_BASIC_ME) sourceprops_pp.o ionic_pp.o
 RT-3D-PP-NA = sourceprops_pp.o rad_evolve_planeparallel_noav.o $(RT-3D_BASIC)
@@ -181,6 +184,9 @@ mpi_cart-minihalo_c2ray : $(PRECISION) $(FILES) $(STRINGS) $(SIZES) $(SCALING) $
 
 cart-enrique_hc_c2ray : $(PRECISION) $(FILES) $(STRINGS) $(SIZES) $(SCALING) $(MATHCONS) $(CGSCONS) $(CGSASTROCONS) $(CGSPHOTOCONS) $(ABUNDANCES) $(ATOMIC) $(NOMPI) $(MESH) $(CART-COORDS) $(HYDRO) $(HMCOOLING) $(RT-3D) $(TIME) $(CART-ROUTINES) $(PROT) $(BOUNDARY) $(LOF) $(ROESOL) $(CART-ENRIQUE) $(INTEGRATE)  $(OUTPUT) $(EVOLVE) $(CAPREOLE) 
 	$(F90) $(OPTIONS) -o $@ $(STRINGS) $(NOMPI) $(MESH) $(CART-COORDS) $(HYDRO) $(TIME) $(CART-ROUTINES) $(HMCOOLING) $(RT-3D) $(PROT) $(BOUNDARY) $(LOF) $(ROESOL) $(CART-ENRIQUE) $(INTEGRATE) $(OUTPUT) $(EVOLVE) $(CAPREOLE) $(LIBS)
+
+cart-enrique_hc_c2ray_openmp : $(PRECISION) $(FILES) $(STRINGS) $(SIZES) $(SCALING) $(MATHCONS) $(CGSCONS) $(CGSASTROCONS) $(CGSPHOTOCONS) $(ABUNDANCES) $(ATOMIC) $(NOMPI) $(MESH) $(CART-COORDS) $(HYDRO) $(HMCOOLING) $(RT-3D_OMP) $(TIME) $(CART-ROUTINES) $(PROT) $(BOUNDARY) $(LOF) $(ROESOL) $(CART-ENRIQUE) $(INTEGRATE)  $(OUTPUT) $(EVOLVE) $(CAPREOLE) 
+	$(F90) $(OPTIONS) -o $@ $(STRINGS) $(NOMPI) $(MESH) $(CART-COORDS) $(HYDRO) $(TIME) $(CART-ROUTINES) $(HMCOOLING) $(RT-3D_OMP) $(PROT) $(BOUNDARY) $(LOF) $(ROESOL) $(CART-ENRIQUE) $(INTEGRATE) $(OUTPUT) $(EVOLVE) $(CAPREOLE) $(LIBS)
 
 cart-enrique_c2ray : $(PRECISION) $(FILES) $(STRINGS) $(SIZES) $(SCALING) $(MATHCONS) $(CGSCONS) $(CGSASTROCONS) $(CGSPHOTOCONS) $(ABUNDANCES) $(ATOMIC) $(NOMPI) $(INPUT) $(MESH) $(CART-COORDS) $(HYDRO) $(HMCOOLING) $(RT-3D) $(TIME) $(CART-ROUTINES) $(PROT) $(BOUNDARY) $(LOF) $(ROESOL) $(CART-ENRIQUE) $(INTEGRATE)  $(OUTPUT) $(EVOLVE) $(CAPREOLE) 
 	$(F90) $(OPTIONS) -o $@ $(STRINGS) $(NOMPI) $(INPUT) $(MESH) $(CART-COORDS) $(HYDRO) $(TIME) $(CART-ROUTINES) $(HMCOOLING) $(RT-3D) $(PROT) $(BOUNDARY) $(LOF) $(ROESOL) $(CART-ENRIQUE) $(INTEGRATE) $(OUTPUT) $(EVOLVE) $(CAPREOLE) $(LIBS)
