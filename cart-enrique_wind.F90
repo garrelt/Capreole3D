@@ -39,7 +39,9 @@ module problem
 
   implicit none
 
+  real(kind=dp),parameter,private :: wind_sphere=3.0
   real(kind=dp),private :: drhodt,dendt
+  integer, private :: normalization
 
 contains
 
@@ -55,6 +57,8 @@ contains
     ! Local variables
     real(kind=dp) :: dmdtwind,velowind
     real(kind=dp) :: r_interface ! dummy needed for calling init_ionic
+    integer :: i,j,k
+    integer :: radius2
     integer :: ierror
 
     if (.not.restart) then ! Fresh start
@@ -94,6 +98,20 @@ contains
     velowind=velowind*1e5
     drhodt=dmdtwind/SCMASS*SCTIME/(dx*dy*dz)
     dendt=0.5*dmdtwind*velowind*velowind/SCMASS/SCVELO/SCVELO*SCTIME/(dx*dy*dz)
+
+    ! calculate volume of sphere for normalization
+    normalization=0
+    do k=srcpos(3)-wind_sphere,srcpos(3)+wind_sphere
+       do j=srcpos(2)-wind_sphere,srcpos(2)+wind_sphere
+          do i=srcpos(1)-wind_sphere,srcpos(1)+wind_sphere
+             radius2=(i-srcpos(1))*(i-srcpos(1)) + &
+                  (i-srcpos(2))*(i-srcpos(2)) + &
+                  (k-srcpos(3))*(k-srcpos(3))
+             if (radius2 <= wind_sphere*wind_sphere) &
+                  normalization=normalization+1
+          enddo
+       enddo
+    enddo
 
     ! Initialize the ionic concentrations
     call init_ionic(restart,r_interface)
@@ -273,15 +291,29 @@ contains
 
     integer,intent(in) :: newold
 
+    integer :: i,j,k
+    integer :: radius2
+
     state => set_state_pointer(newold)
 
-    state(srcpos(1),srcpos(2),srcpos(3),RHO)= &
-         state(srcpos(1),srcpos(2),srcpos(3),RHO)+drhodt*dt/real(nrofDim,dp)
-    state(srcpos(1),srcpos(2),srcpos(3),EN)= &
-         state(srcpos(1),srcpos(2),srcpos(3),EN)+dendt*dt/real(nrofDim,dp)
-    pressr(srcpos(1),srcpos(2),srcpos(3))= &
-         pressr(srcpos(1),srcpos(2),srcpos(3))+dendt*gamma1*dt/real(nrofDim,dp)
-
+    do k=srcpos(3)-wind_sphere,srcpos(3)+wind_sphere
+       do j=srcpos(2)-wind_sphere,srcpos(2)+wind_sphere
+          do i=srcpos(1)-wind_sphere,srcpos(1)+wind_sphere
+             radius2=(i-srcpos(1))*(i-srcpos(1)) + &
+                  (i-srcpos(2))*(i-srcpos(2)) + &
+                  (k-srcpos(3))*(k-srcpos(3))
+             if (radius2 <= wind_sphere*wind_sphere) then
+                state(i,j,k,RHO) = state(i,j,k,RHO) + &
+                     drhodt*dt/real(nrofDim*normalization,dp)
+                state(i,j,k,EN) = state(i,j,k,EN) + &
+                     dendt*dt/real(nrofDim*normalization,dp)
+                pressr(i,j,k) = pressr(i,j,k) + &
+                     dendt*gamma1*dt/real(nrofDim*normalization,dp)
+             endif
+          enddo
+       enddo
+    enddo
+    
   end subroutine inflow
   
   !==========================================================================
