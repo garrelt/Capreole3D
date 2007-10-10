@@ -328,5 +328,5 @@ contains
     integer,intent(in) :: newold
 
   end subroutine apply_grav_force
-    
+
 end module problem

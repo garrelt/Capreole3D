@@ -20,22 +20,28 @@ module problem
   use file_admin, only: stdinput
   use precision, only: dp
   use my_mpi
-  use sizes, only: mbc,neq,RHO,RHVX,RHVY,RHVZ,EN
-  use scaling, only: SCDENS, SCVELO, SCLENG, SCMOME, SCENER
+  use sizes, only: mbc,neq,RHO,RHVX,RHVY,RHVZ,EN,nrofDim
+  use scaling, only: SCDENS, SCVELO, SCLENG, SCMOME, SCENER, SCMASS, SCTIME
   use atomic, only: gamma,gamma1
   use cgsconstants, only: m_p
-  use astroconstants, only: pc
+  use astroconstants, only: pc, M_SOLAR, YEAR
   use abundances, only: mu
   use mesh, only: sx,ex,sy,ey,sz,ez,meshx,meshy,meshz
   use grid, only: x,y,z,dx,dy,dz
   use hydro, only: state,pressr,set_state_pointer,NEW,OLD,restart_state
   use ionic, only: init_ionic
+  use sourceprops, only: srcpos
   use tped, only: n2rho,rho2n,pressr2temper
   use protection, only: presprot
   use geometry, only: presfunc
   use boundary, only: exchngxy
+  use times, only: dt
 
   implicit none
+
+  real(kind=dp),parameter,private :: wind_sphere=3.0
+  real(kind=dp),private :: drhodt,dendt
+  integer, private :: normalization
 
 contains
 
@@ -283,7 +289,8 @@ contains
   subroutine inflow (newold)
     
     ! This routine resets the inner boundary to the inflow condition
-    ! Dummy version
+    ! Dripping wind. Called three times, so distribute the input over
+    ! the three times.
 
     integer,intent(in) :: newold
 
@@ -314,7 +321,7 @@ contains
 
   end subroutine inflow
   
- !==========================================================================
+  !==========================================================================
 
   subroutine apply_grav_force(dt,newold)
 
@@ -324,5 +331,5 @@ contains
     integer,intent(in) :: newold
 
   end subroutine apply_grav_force
-   
+
 end module problem
