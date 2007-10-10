@@ -42,13 +42,13 @@ Program Capreole
 
   use my_mpi
   use file_admin, only: stdinput, log_unit
-  use mesh
-  use output
-  use grid
-  use hydro
-  use times
-  use problem
-  use evolution
+  use mesh, only: init_mesh
+  use output, only: init_output
+  use grid, only: init_coords
+  use hydro, only: init_hydro
+  use times, only: init_time
+  use problem, only: init_problem
+  use evolution, only: evolve
 
   implicit none
 

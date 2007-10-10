@@ -8,17 +8,18 @@ module integrator
 
   ! Version: Strang splitting
  
-  use precision
-  use sizes
-  use mesh
-  use hydro
-  use times
-  use problem
+  use precision, only: dp
+  use sizes, only: neq,neuler,nrOfDim,mbc
+  use mesh, only: sx,ex,sy,ey,sz,ez,meshx,meshy,meshz
+  use grid, only: dx,dy,dz,vol,volx
+  use hydro, only: stnew,stold,NEW,OLD,state1,state2,state,pressr
+  use times, only: dt
+  use problem, only: inflow,apply_grav_force
   use protection, only: presprot
-  use oddeven
-  use boundary
-  use hydrosolver
-  use ionic
+  !use oddeven, only: odd_even
+  use boundary, only: exchngxy
+  use hydrosolver, only: solver,state1d,wp,dstate,constr_solver,destr_solver
+  use ionic, only: rad_evolve3d
 
   implicit none
   
