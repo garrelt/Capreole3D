@@ -1,0 +1,43 @@
+Notes for the development of Capreole3D_V3
+
+Also see the CVS logs
+
+Visit to Morelia (Sep 28 - Oct 10, 2007):
+
+Main changes to C2Ray_F90:
+- Added optically thin case to radiation module
+- Added recalculation of mean electron density
+  to doric_module
+- Added ALOSS-type cooling (H + approx. metal +
+  equilibrium) to cooling_hm.f90.
+- Added ionic_openmp.f90 with OpenMP parallelization
+  according to the 8 octants.
+
+Cleaned up code, added many only's to the use
+statements.
+
+Main changes to Capreole3D_V3
+- Added new cart problems: 
+   enrique2: different input files
+   enrique_wind: stellar wind added
+   gadget: GADGET input files
+   constant: constant density
+
+- Added restart option:
+   restart from ah3 files.
+   Mesh, grid and hydro read from ah3 file.
+   Routines for this added to mesh, grid and
+   hydro modules.
+
+- Added OpenMP parallelization
+   integrate_strang.f90 and roesol.f90 contain OpenMP 
+   statements. Parallelization at the highest loop
+   level of the 3 dimensional sweeps.
+
+- Bugs:
+   evolve was sending stnew to output routine,
+   should be stold.
+
+- Experiments (untested):
+   VLFVS method (integrate_vlfvs.F90)
+   Relaxing TVD method (integrate_tvd.F90, tvdsolver.f90)
