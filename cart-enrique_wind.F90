@@ -105,7 +105,7 @@ contains
        do j=srcpos(2)-wind_sphere,srcpos(2)+wind_sphere
           do i=srcpos(1)-wind_sphere,srcpos(1)+wind_sphere
              radius2=(i-srcpos(1))*(i-srcpos(1)) + &
-                  (i-srcpos(2))*(i-srcpos(2)) + &
+                  (j-srcpos(2))*(j-srcpos(2)) + &
                   (k-srcpos(3))*(k-srcpos(3))
              if (radius2 <= wind_sphere*wind_sphere) &
                   normalization=normalization+1
@@ -296,24 +296,26 @@ contains
 
     state => set_state_pointer(newold)
 
-    do k=srcpos(3)-wind_sphere,srcpos(3)+wind_sphere
-       do j=srcpos(2)-wind_sphere,srcpos(2)+wind_sphere
-          do i=srcpos(1)-wind_sphere,srcpos(1)+wind_sphere
-             radius2=(i-srcpos(1))*(i-srcpos(1)) + &
-                  (i-srcpos(2))*(i-srcpos(2)) + &
-                  (k-srcpos(3))*(k-srcpos(3))
-             if (radius2 <= wind_sphere*wind_sphere) then
-                state(i,j,k,RHO) = state(i,j,k,RHO) + &
-                     drhodt*dt/real(nrofDim*normalization,dp)
-                state(i,j,k,EN) = state(i,j,k,EN) + &
-                     dendt*dt/real(nrofDim*normalization,dp)
-                pressr(i,j,k) = pressr(i,j,k) + &
-                     dendt*gamma1*dt/real(nrofDim*normalization,dp)
-             endif
+    if (dendt > 0.0) then
+       do k=srcpos(3)-wind_sphere,srcpos(3)+wind_sphere
+          do j=srcpos(2)-wind_sphere,srcpos(2)+wind_sphere
+             do i=srcpos(1)-wind_sphere,srcpos(1)+wind_sphere
+                radius2=(i-srcpos(1))*(i-srcpos(1)) + &
+                     (j-srcpos(2))*(j-srcpos(2)) + &
+                     (k-srcpos(3))*(k-srcpos(3))
+                if (radius2 <= wind_sphere*wind_sphere) then
+                   state(i,j,k,RHO) = state(i,j,k,RHO) + &
+                        drhodt*dt/real(nrofDim*normalization,dp)
+                   state(i,j,k,EN) = state(i,j,k,EN) + &
+                        dendt*dt/real(nrofDim*normalization,dp)
+                   pressr(i,j,k) = pressr(i,j,k) + &
+                        dendt*gamma1*dt/real(nrofDim*normalization,dp)
+                endif
+             enddo
           enddo
        enddo
-    enddo
-    
+    endif
+
   end subroutine inflow
   
   !==========================================================================
