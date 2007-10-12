@@ -2,27 +2,19 @@ module hydrosolver
   
   ! Module for Capreole 3D (f90)
   ! Author: Garrelt Mellema
-  ! Date: 2007-10-09
+  ! Date: 2007-10-11 (2007-10-09)
 
   ! This module contains the relaxing TVD solver for solving 
-  ! the Euler equations in three dimensions, including advected quantities.
+  ! the Euler equations in three dimensions, 
+  ! including advected quantities.
   ! 
-  ! The main routine is split into many subroutines for readability
-  ! and to aid the compiler.
-
   ! This version has routines for constructing and destructing the arrays 
   ! needed for the solver, since otherwise they would be placed on the
   ! stack, which can cause problems.
   
-  use precision
-  use scaling
-  use sizes
-  use mesh
-  use grid
-  use atomic
-  use geometry
-
-  !use cgsconstants
+  use precision, only: dp
+  use sizes, only: neq,neuler,mbc,RHO,EN
+  use atomic, only: gamma,gamma1
 
   implicit none
 
@@ -60,7 +52,7 @@ module hydrosolver
   real(kind=dp),dimension(:,:),allocatable :: fr
   real(kind=dp),dimension(:,:),allocatable :: dfl
   real(kind=dp),dimension(:,:),allocatable :: dfr
-  !$OMP THREADPRIVATE(c,fu,fl,fr,dfl,dfr)
+  !$OMP THREADPRIVATE(c,w,fu,fl,fr,dfl,dfr)
 
   public :: constr_solver, destr_solver, solver
   
@@ -80,10 +72,10 @@ contains
     allocate(c(1-mbc:mesh+mbc))
     allocate(w(1-mbc:mesh+mbc,neq))
     allocate(fu(1-mbc:mesh+mbc,neq))
-    allocate(fl(2-mbc:mesh+mbc,neq))
-    allocate(fr(2-mbc:mesh+mbc,neq))
-    allocate(dfl(2-mbc:mesh+mbc,neq))
-    allocate(dfr(2-mbc:mesh+mbc,neq))
+    allocate(fl(1-mbc:mesh+mbc,neq))
+    allocate(fr(1-mbc:mesh+mbc,neq))
+    allocate(dfl(1-mbc:mesh+mbc,neq))
+    allocate(dfr(1-mbc:mesh+mbc,neq))
 
   end subroutine constr_solver
 
@@ -111,18 +103,18 @@ contains
 
   subroutine solver (mesh,dt,dx,dy,dz,V1,V2,V3,ij,ik,ierror)
     
-    ! The TVD solver routine, supplies dstate
+    ! The TVD solver routine, supplies dstate (through module)
     
-    integer,intent(in) :: mesh
-    real(kind=dp),intent(in) :: dt,dx,dy,dz
-    integer,intent(in) :: ij,ik
+    integer,intent(in) :: mesh ! length of pencil
+    real(kind=dp),intent(in) :: dt,dx,dy,dz ! time steps and cell sizes
+    integer,intent(in) :: ij,ik ! position of pencil being done
     integer,intent(in) :: V1,V2,V3 ! indices of the the two velocities:
                                         ! V1: integration direction
-                                        ! V2,V3: perpendicular direction
+                                        ! V2,V3: perpendicular directions
     integer,intent(out) :: ierror ! control integer
 
+    real(kind=dp) :: dtdx
     integer :: i
-    real(kind=dp) :: dtdx!,dtdy
 
     !------------------------------------------------------------------------
 
@@ -130,32 +122,46 @@ contains
 
     dtdx=dt/dx
 
+    !! Do half step using first order upwind fluxes
+
+    ! Calculate central flux w and sound speed c
     call calculate_fluxes (state1d,V1,V2,V3)
 
-    !! Do half step using first-order upwind scheme
-    fr=(state1d*spread(c,2,neuler)+w)*HALF
-    fl=cshift(state1d*spread(c,2,neuler)-w,1,1)*HALF
+    ! Calculate left and right fluxes
+    fr=(state1d*spread(c,2,neq)+w)*HALF
+    fl=cshift(state1d*spread(c,2,neq)-w,1,1)*HALF
 
+    ! Calculate flux differences and update
     fu=(fr-fl)
     dstate=-(fu-cshift(fu,-1,1))*HALF*dtdx
-    
+
+    ! Do intermediate update
+    state1d=state1d+dstate
+    wp(:)=max(gamma1*(state1d(:,EN)- &
+         HALF*(state1d(:,V1)*state1d(:,V1) + &
+         state1d(:,V2)*state1d(:,V2) + &
+         state1d(:,V3)*state1d(:,V3))/state1d(:,RHO)),ZERO)
+
     !! Do full step using second-order TVD scheme
-    call calculate_fluxes (state1d+dstate,V1,V2,V3)
 
-    !! Right-moving waves
-    fr=((state1d+dstate)*spread(c,1,5)+w)*HALF
-    dfl=(fr-cshift(fr,-1,2))*HALF
-    dfr=cshift(dfl,1,2)
+    ! Calculate central flux w and sound speed c
+    call calculate_fluxes (state1d,V1,V2,V3)
+
+     !! Right-moving waves
+    fr=((state1d)*spread(c,2,neq)+w)*HALF
+    dfl=(fr-cshift(fr,-1,1))*HALF
+    dfr=cshift(dfl,1,1)
     fr=fr+limiter(dfl,dfr,VAN_LEER)
-
+ 
     !! Left-moving waves
-    fl=cshift((state1d+dstate)*spread(c,1,5)-w,1,2)*HALF
-    dfl=(cshift(fl,-1,2)-fl)*HALF
-    dfr=cshift(dfl,1,2)
+    fl=cshift((state1d)*spread(c,2,neq)-w,1,1)*HALF
+    dfl=(cshift(fl,-1,1)-fl)*HALF
+    dfr=cshift(dfl,1,1)
     fl=fl+limiter(dfl,dfr,VAN_LEER)
 
+    ! Calculate flux differences and update
     fu=(fr-fl)
-    dstate=-(fu-cshift(fu,-1,2))*dtdx
+    dstate=-(fu-cshift(fu,-1,1))*dtdx
 
     !ipres_error=pressure_fix ()
     
@@ -207,12 +213,15 @@ contains
       real(kind=dp),dimension(1-mbc:mesh+mbc,neq),intent(in) :: a,b
       integer,intent(in) :: limfunc
       
+      limiter=0.0
       select case (limfunc)
       case (NO_LIMITER)
          limiter = ZERO
       case(VAN_LEER)
          ! van Leer
-         limiter=TWO*max(ZERO,a*b)/(a+b)
+           where (a*b > ZERO)
+              limiter=TWO*a*b/(a+b)
+           endwhere
       case(MINMOD)
          ! MinMod
          limiter=(sign(HALF,a)+sign(HALF,b))*min(abs(a),abs(b))
