@@ -9,14 +9,16 @@ module integrator
   ! Version: van Leer Flux Vector Splitting
  
   use precision, only: dp
-  use sizes, only: neuler, neq, mbc, RHO, RHVX, RHVY, EN
-  use mesh, only: sx,ex,sy,ey
-  use hydro
-  use times
-  use problem
-  use protection
-  use boundary
-  use ionic
+  use sizes, only: neuler, neq, mbc, RHO, RHVX, RHVY, RHVZ, EN
+  use mesh, only: sx,ex,sy,ey,sz,ez
+  use grid, only: dx,dy,dz
+  use atomic, only: gamma,gamma1
+  use hydro, only: state,stnew,stold,NEW,OLD,pressr
+  use times, only: dt
+  use problem, only: inflow
+  use protection, only: presprot
+  use boundary, only: exchngxy
+  use ionic, only: rad_evolve3d
 
   implicit none
   
