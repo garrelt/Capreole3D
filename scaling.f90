@@ -9,7 +9,7 @@ module scaling
 
   ! Version: cgs units, circumstellar scales
 
-  use precision
+  use precision, only: dp
   private
 
   real(kind=dp),parameter,public :: scleng=1.0e16_dp ! 10^16 cm
