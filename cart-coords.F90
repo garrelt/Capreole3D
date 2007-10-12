@@ -20,13 +20,13 @@ module grid
   ! 2005-04-20 - adapted for 3D
   
   use file_admin, only: stdinput
-  use precision
-  use scaling
-  use sizes
+  use precision, only: dp
+  use scaling, only: SCLENG
+  use sizes, only: nrOfDim,neq,mbc,CART
   use my_mpi
-  use mesh
-  use string_manipulation
-  use astroconstants
+  use mesh, only: meshx,meshy,meshz,sx,ex,sy,ey,sz,ez
+  use string_manipulation, only: convert_case
+  use astroconstants, only: pc,kpc,Mpc,AU
 
   implicit none
   private
