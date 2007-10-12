@@ -50,7 +50,10 @@ contains
     character(len=19),intent(in) :: restartfile
 
     ! Local variables
+    real(kind=dp) :: dmdtwind,velowind
     real(kind=dp) :: r_interface ! dummy needed for calling init_ionic
+    integer :: i,j,k
+    integer :: radius2
     integer :: ierror
 
     ! Initialize the radiative bits
@@ -73,6 +76,42 @@ contains
 
     endif
        
+    ! Ask for the input if you are processor 0.
+    if (rank == 0) then
+       write (*,'(//,A,/)') '----- Wind -----'
+       write (*,'(A,$)') '1) Mass loss rate (M0/yr): '
+       read(*,*) dmdtwind
+       write (*,'(A,$)') '2) Velocity (km/s): '
+       read (*,*) velowind
+    endif
+
+    ! report input parameters
+    if (rank == 0) then
+       write (30,'(//,A,/)') '----- Wind -----'
+       write (30,'(A,1PE10.3,A)') '1) Mass loss rate: ',dmdtwind,' M0/yr'
+       write (30,'(A,F10.3,A)')   '2) Velocity: ',velowind,' km/s'
+    endif
+
+    ! Scale wind parameters
+    dmdtwind=dmdtwind*M_SOLAR/YEAR
+    velowind=velowind*1e5
+    drhodt=dmdtwind/SCMASS*SCTIME/(dx*dy*dz)
+    dendt=0.5*dmdtwind*velowind*velowind/SCMASS/SCVELO/SCVELO*SCTIME/(dx*dy*dz)
+
+    ! calculate volume of sphere for normalization
+    normalization=0
+    do k=srcpos(3)-wind_sphere,srcpos(3)+wind_sphere
+       do j=srcpos(2)-wind_sphere,srcpos(2)+wind_sphere
+          do i=srcpos(1)-wind_sphere,srcpos(1)+wind_sphere
+             radius2=(i-srcpos(1))*(i-srcpos(1)) + &
+                  (j-srcpos(2))*(j-srcpos(2)) + &
+                  (k-srcpos(3))*(k-srcpos(3))
+             if (radius2 <= wind_sphere*wind_sphere) &
+                  normalization=normalization+1
+          enddo
+       enddo
+    enddo
+
     ! Set the boundary conditions
     call exchngxy(OLD)
 
@@ -206,9 +245,35 @@ contains
   subroutine inflow (newold)
     
     ! This routine resets the inner boundary to the inflow condition
-    ! Dummy version
+    ! Dripping wind. Called three times, so distribute the input over
+    ! the three times.
 
     integer,intent(in) :: newold
+
+    integer :: i,j,k
+    integer :: radius2
+
+    state => set_state_pointer(newold)
+
+    if (dendt > 0.0) then
+       do k=srcpos(3)-wind_sphere,srcpos(3)+wind_sphere
+          do j=srcpos(2)-wind_sphere,srcpos(2)+wind_sphere
+             do i=srcpos(1)-wind_sphere,srcpos(1)+wind_sphere
+                radius2=(i-srcpos(1))*(i-srcpos(1)) + &
+                     (j-srcpos(2))*(j-srcpos(2)) + &
+                     (k-srcpos(3))*(k-srcpos(3))
+                if (radius2 <= wind_sphere*wind_sphere) then
+                   state(i,j,k,RHO) = state(i,j,k,RHO) + &
+                        drhodt*dt/real(nrofDim*normalization,dp)
+                   state(i,j,k,EN) = state(i,j,k,EN) + &
+                        dendt*dt/real(nrofDim*normalization,dp)
+                   pressr(i,j,k) = pressr(i,j,k) + &
+                        dendt*gamma1*dt/real(nrofDim*normalization,dp)
+                endif
+             enddo
+          enddo
+       enddo
+    endif
 
   end subroutine inflow
   
