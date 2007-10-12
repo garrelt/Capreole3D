@@ -99,7 +99,11 @@ contains
     drhodt=dmdtwind/SCMASS*SCTIME/(dx*dy*dz)
     dendt=0.5*dmdtwind*velowind*velowind/SCMASS/SCVELO/SCVELO*SCTIME/(dx*dy*dz)
 
+    ! Initialize the ionic concentrations
+    call init_ionic(restart,r_interface)
+
     ! calculate volume of sphere for normalization
+    ! need to know srcpos for this.
     normalization=0
     do k=srcpos(3)-wind_sphere,srcpos(3)+wind_sphere
        do j=srcpos(2)-wind_sphere,srcpos(2)+wind_sphere
@@ -113,8 +117,6 @@ contains
        enddo
     enddo
 
-    ! Initialize the ionic concentrations
-    call init_ionic(restart,r_interface)
 
   end subroutine init_problem
 
