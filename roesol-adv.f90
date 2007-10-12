@@ -19,15 +19,10 @@ module hydrosolver
   ! needed for the solver, since otherwise they would be placed on the
   ! stack, which can cause problems.
   
-  use precision
-  use scaling
-  use sizes
-  use mesh
-  use grid
-  use atomic
-  use geometry
-
-  !use cgsconstants
+  use precision, only: dp
+  use sizes, only: nrOfDim,neq,neuler,mbc,RHO,EN
+  use atomic, only: gamma1
+  !use geometry
 
   implicit none
 
