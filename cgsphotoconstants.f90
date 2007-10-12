@@ -5,7 +5,7 @@ module cgsphotoconstants
   ! Units: cgs
   
   use precision, only: dp
-  use cgsconstants
+  use cgsconstants, only: ev2fr,eth0
 
   ! Helium ionization potentials (eV)
   real(kind=dp), dimension(0:1),parameter :: ethe=(/24.587,54.416/)
