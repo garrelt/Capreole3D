@@ -55,7 +55,7 @@ CART-ELLIPSECLUMP = cart-ellipseclump.o
 
 CART-DENSITYFIELD = cart-densityfield.o
 
-CART-ENRIQUE = cart-enrique_wind.o
+CART-ENRIQUE = cart-enrique2.o
 
 CART-HALO = cart-halo.o
 
@@ -68,6 +68,8 @@ TIME = time.o
 INTEGRATE = integrate-strang.o
 
 INTEGRATE_TVD = integrate_tvd.o
+
+INTEGRATE_VLFVS = integrate_vlfvs.o
 
 EVOLVE = evolve.o
 
@@ -200,6 +202,9 @@ cart-constant_hc_c2ray : $(PRECISION) $(FILES) $(STRINGS) $(SIZES) $(SCALING) $(
 
 cart-ellipseclump_tvd : $(PRECISION) $(FILES) $(STRINGS) $(SIZES) $(SCALING) $(CONSTANTS) $(ABUNDANCES) $(ATOMIC) $(NOMPI) $(MESH) $(CART-COORDS) $(HYDRO) $(TIME) $(CART-ROUTINES) $(PROT) $(BOUNDARY) $(LOF) $(TVDSOL) $(NO_IONIC) $(CART-ELLIPSECLUMP) $(INTEGRATE_TVD)  $(OUTPUT) $(EVOLVE) $(CAPREOLE) 
 	$(F90) $(OPTIONS) -o $@ $(STRINGS) $(NOMPI) $(MESH) $(CART-COORDS) $(HYDRO) $(TIME) $(CART-ROUTINES) $(PROT) $(BOUNDARY) $(LOF) $(TVDSOL) $(NO_IONIC) $(CART-ELLIPSECLUMP) $(INTEGRATE_TVD) $(OUTPUT) $(EVOLVE) $(CAPREOLE) $(LIBS)
+
+cart-ellipseclump_vlfvs : $(PRECISION) $(FILES) $(STRINGS) $(SIZES) $(SCALING) $(CONSTANTS) $(ABUNDANCES) $(ATOMIC) $(NOMPI) $(MESH) $(CART-COORDS) $(HYDRO) $(TIME) $(CART-ROUTINES) $(PROT) $(BOUNDARY) $(LOF) $(NO_IONIC) $(CART-ELLIPSECLUMP) $(INTEGRATE_VLFVS)  $(OUTPUT) $(EVOLVE) $(CAPREOLE) 
+	$(F90) $(OPTIONS) -o $@ $(STRINGS) $(NOMPI) $(MESH) $(CART-COORDS) $(HYDRO) $(TIME) $(CART-ROUTINES) $(PROT) $(BOUNDARY) $(LOF) $(NO_IONIC) $(CART-ELLIPSECLUMP) $(INTEGRATE_VLFVS) $(OUTPUT) $(EVOLVE) $(CAPREOLE) $(LIBS)
 
 clean:
 	rm -f *.o *.mod *.l *.il *.vo
