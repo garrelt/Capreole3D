@@ -8,11 +8,7 @@ module ionic
 
   ! Version: dummy routines, no atomic physics applied
 
-  use precision
-  use sizes
-  use mesh
-  use grid
-  use hydro
+  use precision, only: dp
 
   implicit none
 
