@@ -18,15 +18,15 @@ module problem
   use precision, only: dp
   use string_manipulation, only: convert_case
   use my_mpi
-  use sizes, only: mbc,neq,RHO,RHVX,RHVY,RHVZ,EN
-  use scaling, only: SCDENS, SCVELO, SCLENG, SCENER
+  use sizes, only: mbc,neq,RHO,RHVX,RHVY,RHVZ,EN,XHI,XHII
+  use scaling, only: SCDENS, SCVELO, SCLENG, SCENER, SCMOME
   use cgsconstants, only: m_p, kb
   use astroconstants, only: pc, kpc, Mpc
   use abundances, only: mu
   use atomic, only: gamma, gamma1, boltzm
   use mesh, only: sx,ex,sy,ey,sz,ez,meshx,meshy,meshz
   use grid, only: x,y,z,dx,dy,dz
-  use hydro, only: state,pressr,set_state_pointer,NEW,OLD,stnew,tmpstate
+  use hydro, only: state,pressr,set_state_pointer,NEW,OLD,stnew,tmpstate,restart_state
   use boundary, only: exchngxy
   use ionic, only: init_ionic
   use sourceprops, only: rsrcpos
@@ -38,107 +38,128 @@ module problem
 
 contains
 
-  subroutine init_problem (restart)
+  subroutine init_problem (restart,restartfile)
     
     ! This routine initializes all hydro variables
     
     ! This may be a fresh start or a restart of a saved run
     
-    ! Case: steady shock interacting with elliptical cloud; (x,y)
-    
-    ! smoothing parameter for making soft-edged clump
-    real(kind=dp),parameter :: eta=0.1_dp
-    
     logical,intent(in) :: restart ! tells you whether it's a new run or a restart
+    character(len=19),intent(in) :: restartfile
+
+    ! Local variables
+    real(kind=dp) :: r_interface ! dummy needed for calling init_ionic
+    integer :: ierror
+
+    ! Initialize the ionic concentrations
+    ! source position to be known before initializing the state
+    call init_ionic(restart,r_interface)
+
+    if (.not.restart) then ! Fresh start
+
+       call fresh_start_state( )
+       
+    else
+
+       call restart_state(restartfile,ierror)
+       state(:,:,:,RHO)=state(:,:,:,RHO)/scdens
+       state(:,:,:,RHVX)=state(:,:,:,RHVX)/scmome
+       state(:,:,:,RHVY)=state(:,:,:,RHVY)/scmome
+       state(:,:,:,RHVZ)=state(:,:,:,RHVZ)/scmome
+       state(:,:,:,EN)=state(:,:,:,EN)/scener
+       call exchngxy(OLD)
+
+    endif
+       
+  end subroutine init_problem
+
+  !==========================================================================
+
+  subroutine fresh_start_state ()
+    
+    ! This routine initializes all hydro variables for a fresh start
+    
+    ! Case: 1/r^2 halo
+    
     real(kind=dp) :: r_core,dens_core,etemperature
     real(kind=dp) :: dens_val,xs,ys,zs,dist
 
     integer :: i,j,k,nitt,ieq
-    real(kind=dp)    :: r_interface ! dummy needed for calling init_ionic
     character(len=10) :: str_length_unit
 
 #ifdef MPI       
     integer :: ierror
 #endif
 
-    if (.not.restart) then ! Fresh start
+    ! Ask for the input if you are processor 0.
+    if (rank == 0) then
+       write (*,'(//,A,/)') '----- Halo -----'
+       write(*,'(A,$)') '1) Reference (core) radius (specify unit): '
+       read(stdinput,*) r_core,str_length_unit
+       write(*,'(A,$)') '2) Density at reference (core) radius (cm^-3): '
+       read(stdinput,*) dens_core
+       write (*,'(A,$)') '3) Initial temperature (K): '
+       read (stdinput,*) etemperature
+    endif
+    
+    ! report input parameters
+    if (rank == 0) then
+       write(30,'(A)') & 
+            'Problem: cart-halo (halo with constant density core', &
+            ' and 1/r^2 outside of the core)'
+       write (30,'(//,A,/)') '----- Halo -----'
+       write (30,'(A,1PE10.3,A)') '1) Reference (core) radius: ',r_core, &
+            str_length_unit
+       write (30,'(A,1PE10.3)') '2) Core density (cm^-3): ',dens_core
+       write (30,'(A,1PE10.3)') '3) Temperature: ',etemperature
        
-       ! Ask for the input if you are processor 0.
-       if (rank == 0) then
-          write (*,'(//,A,/)') '----- Halo -----'
-          write(*,'(A,$)') '1) Reference (core) radius (specify unit): '
-          read(stdinput,*) r_core,str_length_unit
-          write(*,'(A,$)') '2) Density at reference (core) radius (cm^-3): '
-          read(stdinput,*) dens_core
-          write (*,'(A,$)') '3) Initial temperature (K): '
-          read (stdinput,*) etemperature
-       endif
-
-       ! report input parameters
-       if (rank == 0) then
-          write(30,'(A)') & 
-               'Problem: cart-halo (halo with constant density core', &
-               ' and 1/r^2 outside of the core)'
-          write (30,'(//,A,/)') '----- Halo -----'
-          write (30,'(A,1PE10.3,A)') '1) Reference (core) radius: ',r_core, &
-               str_length_unit
-          write (30,'(A,1PE10.3)') '2) Core density (cm^-3): ',dens_core
-          write (30,'(A,1PE10.3)') '3) Temperature: ',etemperature
-          
-          ! Convert to cm
-          r_core=r_core*unit_conversion(str_length_unit)
-       endif
-          
+       ! Convert to cm
+       r_core=r_core*unit_conversion(str_length_unit)
+    endif
+    
 #ifdef MPI       
-       ! Distribute the input parameters to the other nodes
-       call MPI_BCAST(r_core,1,MPI_DOUBLE_PRECISION,0,MPI_COMM_NEW, &
-            ierror)
-       call MPI_BCAST(dens_core,1,MPI_DOUBLE_PRECISION,0,MPI_COMM_NEW, &
-            ierror)
-       call MPI_BCAST(etemperature,1,MPI_DOUBLE_PRECISION,0, & 
-            MPI_COMM_NEW,ierror)
+    ! Distribute the input parameters to the other nodes
+    call MPI_BCAST(r_core,1,MPI_DOUBLE_PRECISION,0,MPI_COMM_NEW, &
+         ierror)
+    call MPI_BCAST(dens_core,1,MPI_DOUBLE_PRECISION,0,MPI_COMM_NEW, &
+         ierror)
+    call MPI_BCAST(etemperature,1,MPI_DOUBLE_PRECISION,0, & 
+         MPI_COMM_NEW,ierror)
 #endif
-       
-       ! Scale physical parameters (density scaled below)
-       r_core=r_core/scleng
-       
-       ! Initialize the ionic concentrations and all radiation
-       ! quantities (need to do this before initializing the
-       ! state since this needs the source position
-       call init_ionic(restart,r_interface)
-
-       ! Calculate the initial state
-       ! Source position determines the core location
-       do k=sz-mbc,ez+mbc
-          do j=sy-mbc,ey+mbc
-             do i=sx-mbc,ex+mbc
-                xs=x(i)-rsrcpos(1)
-                ys=y(j)-rsrcpos(2)
-                zs=z(k)-rsrcpos(3)
-                dist=sqrt(xs*xs+ys*ys+zs*zs)
-                if (dist.le.r_core) then
-                   ! Flat core
-                   dens_val=dens_core
-                else
-                   dens_val=dens_core*(dist/r_core)**(-2.0)
-                endif
-                state(i,j,k,RHO)=n2rho(dens_val)/scdens
-                state(i,j,k,RHVX)=0.0d0
-                state(i,j,k,RHVY)=0.0d0
-                state(i,j,k,RHVZ)=0.0d0
-                pressr(i,j,k)=temper2pressr(etemperature,dens_val,&
-                     electrondens(dens_val,state(i,j,k,XHI:XHII)))/scener
-                state(i,j,k,EN)=pressr(i,j,k)/gamma1+ &
-                     0.5d0*(state(i,j,k,RHVX)*state(i,j,k,RHVX)+ &
-                     state(i,j,k,RHVY)*state(i,j,k,RHVY)+ &
-                     state(i,j,k,RHVZ)*state(i,j,k,RHVZ))/state(i,j,k,RHO)
-             enddo
+    
+    ! Scale physical parameters (density scaled below)
+    r_core=r_core/scleng
+    
+    ! Calculate the initial state
+    ! Source position determines the core location
+    do k=sz-mbc,ez+mbc
+       do j=sy-mbc,ey+mbc
+          do i=sx-mbc,ex+mbc
+             xs=x(i)-rsrcpos(1)
+             ys=y(j)-rsrcpos(2)
+             zs=z(k)-rsrcpos(3)
+             dist=sqrt(xs*xs+ys*ys+zs*zs)
+             if (dist.le.r_core) then
+                ! Flat core
+                dens_val=dens_core
+             else
+                dens_val=dens_core*(dist/r_core)**(-2.0)
+             endif
+             state(i,j,k,RHO)=n2rho(dens_val)/scdens
+             state(i,j,k,RHVX)=0.0d0
+             state(i,j,k,RHVY)=0.0d0
+             state(i,j,k,RHVZ)=0.0d0
+             pressr(i,j,k)=temper2pressr(etemperature,dens_val,&
+                  electrondens(dens_val,state(i,j,k,XHI:XHII)))/scener
+             state(i,j,k,EN)=pressr(i,j,k)/gamma1+ &
+                  0.5d0*(state(i,j,k,RHVX)*state(i,j,k,RHVX)+ &
+                  state(i,j,k,RHVY)*state(i,j,k,RHVY)+ &
+                  state(i,j,k,RHVZ)*state(i,j,k,RHVZ))/state(i,j,k,RHO)
           enddo
        enddo
-       
-    endif
-
-  end subroutine init_problem
+    enddo
+    
+  end subroutine fresh_start_state
 
   !==========================================================================
 

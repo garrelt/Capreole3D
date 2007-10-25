@@ -242,7 +242,7 @@ contains
        do j=sy-mbc,ey+mbc
           do i=sx-mbc,ex+mbc
              ! densities are in cm^-3
-             state(i,j,k,RHO)=n2rho(tempdens(i,j,k))/scdens 
+             state(i,j,k,RHO)=n2rho(real(tempdens(i,j,k),dp))/scdens 
           enddo
        enddo
     enddo
@@ -265,7 +265,7 @@ contains
     ! Set the initial pressure and energy density
     ! (depends on the temperature setup, isobaric or isothermal)
     if (temperature_setup == 1) then
-       epressr=temper2pressr(etemperature,maxdens,0.0)/SCENER
+       epressr=temper2pressr(etemperature,maxdens,0.0_dp)/SCENER
        do k=sz-mbc,ez+mbc
           do j=sy-mbc,ey+mbc
              do i=sx-mbc,ex+mbc
@@ -283,7 +283,7 @@ contains
           do j=sy-mbc,ey+mbc
              do i=sx-mbc,ex+mbc
                 pressr(i,j,k)=temper2pressr(etemperature, &
-                     rho2n(state(i,j,k,RHO)*scdens),0.0)/SCENER
+                     rho2n(state(i,j,k,RHO)*scdens),0.0_dp)/SCENER
                 state(i,j,k,EN)=pressr(i,j,k)/gamma1+ &
                      0.5d0*(state(i,j,k,RHVX)*state(i,j,k,RHVX)+ &
                      state(i,j,k,RHVY)*state(i,j,k,RHVY)+ &
@@ -308,4 +308,15 @@ contains
     
   end subroutine inflow
   
+  !==========================================================================
+
+  subroutine apply_grav_force(dt,newold)
+
+    ! Dummy routine
+
+    real(kind=dp),intent(in) :: dt
+    integer,intent(in) :: newold
+
+  end subroutine apply_grav_force
+
 end module problem
