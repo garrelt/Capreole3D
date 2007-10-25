@@ -12,12 +12,20 @@ module my_mpi
   ! fnd3dnbrs:    find neighbours in 3D domain decomposition
   
   ! Each processor has its own log file, which is called log.0, log.1,
-  ! etc. This is opened in mpi_setup, and is connected to unit 30.
+  ! etc. This is opened in mpi_setup, and is connected to unit log_unit.
   ! The file is close in mpi_end
 
   ! This is the system module:
-  !!include '/beosoft/mpich/include/mpif.h'        ! necessary for MPI
   !use mpi
+
+#ifdef XLF
+  USE XLFUTILITY, only: hostnm => hostnm_ , flush => flush_
+#endif
+
+#ifdef IFORT
+  USE IFPORT, only: hostnm, flush
+#endif
+  use file_admin, only: log_unit
 
   implicit none
 
@@ -38,6 +46,8 @@ module my_mpi
   integer,public ::  nbrdown,nbrup     ! up and down neighbours 
   integer,public ::  nbrabove,nbrbelow ! above and below neighbours 
 
+  public: mpi_setup,mpi_end
+  private: mpi_basic,mpi_topology,fnd3dnbrs,
 contains
 
   !----------------------------------------------------------------------------
@@ -54,14 +64,14 @@ contains
     ! Open processor dependent log file
     write(number,'(I4)') rank
     filename=trim(adjustl('log.'//trim(adjustl(number))))
-    open(unit=30,file=filename,status='unknown')
+    open(unit=log_unit,file=filename,status='unknown')
 
-    write(30,*) 'Log file for rank ',rank
+    write(log_unit,*) 'Log file for rank ',rank
     ! Figure out hostname
     ! NOTE: compiler dependent!!!
     ierror=hostnm(hostname)
-    write(30,*) 'The Processor is ',hostname
-    call flush(30)
+    write(log_unit,*) 'The Processor is ',hostname
+    call flush(log_unit)
 
     call mpi_topology
 
@@ -71,14 +81,16 @@ contains
 
   subroutine mpi_basic
 
-    integer :: ierror          ! control variable for MPI
+    ! Basic MPI initialization
 
-    call MPI_INIT (ierror)  ! Initialize MPI
+    integer :: mpi_ierror          ! control variable for MPI
 
-    call MPI_COMM_RANK(MPI_COMM_WORLD,rank,ierror) ! Find processor rank
+    call MPI_INIT (mpi_ierror)  ! Initialize MPI
+
+    call MPI_COMM_RANK(MPI_COMM_WORLD,rank,mpi_ierror) ! Find processor rank
 
     ! Find total number of processors (npr)
-    call MPI_COMM_SIZE(MPI_COMM_WORLD,npr,ierror)
+    call MPI_COMM_SIZE(MPI_COMM_WORLD,npr,mpi_ierror)
 
   end subroutine mpi_basic
 
@@ -86,24 +98,28 @@ contains
 
   subroutine mpi_topology
 
+    ! Construct a new MPI communicator for domain decomposition
+
     logical,dimension(NPDIM) :: periods ! for periodic grid
     logical                  :: reorder ! reorder the MPI_COMM_WORLD
-    integer          :: ierror=0
+    integer          :: mpi_ierror=0
 
     ! Make a new topology
     dims(:)=0
+    ! For plane parallel radiative transport:
+    !dims(1)=1
 
-    call MPI_Dims_create(npr,NPDIM,dims,ierror)
+    call MPI_Dims_create(npr,NPDIM,dims,mpi_ierror)
 
     periods(:)=.FALSE.      ! non-periodic boundaries
 
     reorder=.TRUE.
     ! makes MPI_COMM_NEW    
     call MPI_Cart_create(MPI_COMM_WORLD,NPDIM,dims,periods,reorder, &
-         MPI_COMM_NEW,ierror)
+         MPI_COMM_NEW,mpi_ierror)
     ! makes grid_struct               
     call MPI_Cart_get(MPI_COMM_NEW,NPDIM,dims, & ! makes grid_struct
-         periods,grid_struct,ierror)
+         periods,grid_struct,mpi_ierror)
       
     ! Find the neighbours.
     ! My neighbors are now +/- 1 with my rank. Handle the case of the 
@@ -116,13 +132,15 @@ contains
 
   subroutine mpi_end
 
-    integer :: ierror=0
+    ! Close MPI
+
+    integer :: mpi_ierror=0
 
     ! Close log file
-    close(30)
+    close(log_unit)
 
     ! Close MPI
-    call MPI_FINALIZE(ierror)
+    call MPI_FINALIZE(mpi_ierror)
 
   end subroutine mpi_end
 
@@ -133,11 +151,11 @@ contains
     ! This routine determines the neighbours in a 3-d decomposition of
     ! the grid. This assumes that MPI_Cart_create has already been called 
 
-    integer :: ierror=0
+    integer :: mpi_ierror=0
 
-    call MPI_Cart_shift( MPI_COMM_NEW, 0,  1, nbrleft,  nbrright, ierror )
-    call MPI_Cart_shift( MPI_COMM_NEW, 1,  1, nbrdown,  nbrup,    ierror )
-    call MPI_Cart_shift( MPI_COMM_NEW, 2,  1, nbrbelow, nbrabove, ierror )
+    call MPI_Cart_shift( MPI_COMM_NEW, 0,  1, nbrleft,  nbrright, mpi_ierror )
+    call MPI_Cart_shift( MPI_COMM_NEW, 1,  1, nbrdown,  nbrup,    mpi_ierror )
+    call MPI_Cart_shift( MPI_COMM_NEW, 2,  1, nbrbelow, nbrabove, mpi_ierror )
 
   end subroutine fnd3dnbrs
 

@@ -27,15 +27,16 @@ module my_mpi
 
   integer,parameter,public :: NPDIM=3 ! dimension of problem
 
+  ! All of these are set to be consistent with the MPI version
   integer,public :: rank              ! rank of the processor
   integer,public :: npr               ! number of processors
   integer,public :: nthreads        ! number of threads (per processor)
-  integer,public :: MPI_COMM_NEW      ! the (new) communicator
-  integer,dimension(NPDIM),public :: dims ! number of processors in 
-                                             !  each dimension
+  integer,public :: MPI_COMM_NEW      ! the (new) communicator (dummy)
+  integer,dimension(NPDIM),public :: dims ! number of processors in  
+                                             !  each dimension (dummy)
   integer,dimension(NPDIM),public :: grid_struct ! coordinates of 
                                                !the processors in the grid
-  
+                                               ! (dummy)
   integer,public ::  nbrleft,nbrright ! left and right neighbours
   integer,public ::  nbrdown,nbrup    ! up and down neighbours 
   integer,public ::  nbrabove,nbrbelow        ! above and below neighbours 
@@ -47,6 +48,7 @@ contains
   !----------------------------------------------------------------------------
 
   subroutine mpi_setup ( )
+
 
     character(len=10) :: filename        ! name of the log file
     character(len=4) :: number
