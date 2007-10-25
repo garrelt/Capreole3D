@@ -13,7 +13,7 @@ module mesh
 
   use precision, only: dp
   use my_mpi
-  use file_admin, only: stdinput
+  use file_admin, only: stdinput,log_unit
 
   implicit none
 
@@ -23,6 +23,10 @@ module mesh
   integer,public :: sx,ex,sy,ey,sz,ez ! local grid start and end coordinates
 
   public :: init_mesh
+
+#ifdef MPI
+  integer :: mpi_ierror
+#endif
 
 contains
 
@@ -45,8 +49,8 @@ contains
           read (unit=stdinput,fmt=*) meshx,meshy,meshz
           
           ! Report
-          write(unit=30,fmt="(2/,A,/)") "----- Grid -----"
-          write(unit=30,fmt="(A,3I5)") "1) Number of grid points: ", &
+          write(unit=log_unit,fmt="(2/,A,/)") "----- Grid -----"
+          write(unit=log_unit,fmt="(A,3I5)") "1) Number of grid points: ", &
                meshx,meshy,meshz
        endif
 
@@ -59,9 +63,9 @@ contains
 
 #ifdef MPI
     ! Distribute the total grid size over all processors
-    call MPI_BCAST(meshx,1,MPI_INTEGER,0,MPI_COMM_NEW,ierror)
-    call MPI_BCAST(meshy,1,MPI_INTEGER,0,MPI_COMM_NEW,ierror)
-    call MPI_BCAST(meshz,1,MPI_INTEGER,0,MPI_COMM_NEW,ierror)
+    call MPI_BCAST(meshx,1,MPI_INTEGER,0,MPI_COMM_NEW,mpi_ierror)
+    call MPI_BCAST(meshy,1,MPI_INTEGER,0,MPI_COMM_NEW,mpi_ierror)
+    call MPI_BCAST(meshz,1,MPI_INTEGER,0,MPI_COMM_NEW,mpi_ierror)
 #endif
 
     ! Compute the decomposition of the grid over the processors
@@ -72,7 +76,7 @@ contains
     call fnd3ddecomp ()
 
     ! Report the grid for the local processor
-    write(unit=30,fmt=*) "Grid: ",sx,ex,sy,ey,sz,ez
+    write(unit=log_unit,fmt=*) "Grid: ",sx,ex,sy,ey,sz,ez
     
   end subroutine init_mesh
 
