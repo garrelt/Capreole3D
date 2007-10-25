@@ -1,7 +1,8 @@
 Program Capreole
   
   ! Author: Garrelt Mellema
-  ! version 2004.05.11 (F90)
+  ! version 2007.10.22
+  ! (previous 2004.05.11)
   ! (previous version 2003.06.01) 
   ! (previous version 2001.10.01)
   ! (descends from F77 version 2001.03.21)
@@ -9,28 +10,11 @@ Program Capreole
   ! This is general surpose hydrodynamics programme in Fortran 90/95.
   ! It can be compiled for use in an MPI environment (MPICH).
   ! For this use compiler option -DMPI, and make sure you use the
-  ! routines in mpi.f90. Without MPI use no_mpi.f90.
+  ! routines in mpi.f90. For compilation without MPI do not use
+  ! the -DMPI option and use no_mpi.f90.
   !
   ! All initial/boundary conditions should be supplied in separate routines, 
   ! as well as some other functions, noted in the programme.
-  ! Modules needed:
-  ! atomic
-  ! boundary
-  ! evolution
-  ! geometry
-  ! grid
-  ! hydro
-  ! hydrosolver
-  ! integrator
-  ! mesh
-  ! my_mpi
-  ! output
-  ! precision
-  ! problem
-  ! protection
-  ! scaling
-  ! sizes
-  ! times
 
   ! This version avoids passing large dynamic arrays as subroutine arguments
   ! since this tends to fill up the stack space (and on some machines
@@ -40,7 +24,8 @@ Program Capreole
   ! pointers are used.
   !----------------------------------------------------------------------------
 
-  use my_mpi
+  use my_mpi ! too many variables inherited from the MPI library
+  !            to use 'only' here.
   use file_admin, only: stdinput, log_unit
   use mesh, only: init_mesh
   use output, only: init_output
@@ -52,11 +37,11 @@ Program Capreole
 
   implicit none
 
-  ! Start and end time for CPU report
+  ! Start and end time for CPU and wall clock report
   real :: tstart,tend
   integer :: cntr1,cntr2,countspersec
 
-  ! Restart
+  ! Restart variables
   logical :: restart!=.false.
   character(len=19) :: restartfile
   character(len=1) :: answer
@@ -67,7 +52,7 @@ Program Capreole
   ! iargc library function (number of command line arguments)
   integer :: iargc
 
-  ! Input file
+  ! File with input values
   character(len=512) :: inputfile
 
   !----------------------------------------------------------------------------
@@ -75,7 +60,7 @@ Program Capreole
   ! Initialize cpu timer
   call cpu_time(tstart)
 
-  ! Initialize wall cock times
+  ! Initialize wall cock timer
   call system_clock(cntr1)
 
   ! Set up MPI structure
@@ -115,7 +100,7 @@ Program Capreole
   ! Initialize output routines
   call init_output(restart,restartfile,ierror)
 
-  ! Initialize the coordinate system
+  ! Initialize the coordinate system (grid)
   call init_coords(restart,restartfile)
   
   ! Initialize the hydrodynamic variables
@@ -128,16 +113,15 @@ Program Capreole
   ! Evolve the problem
   call evolve()
 
-  ! End the run
-  call mpi_end()
-
-  ! Find out CPU time
+  ! Find out CPU and wall clock time
   call cpu_time(tend)
   call system_clock(cntr2,countspersec)
 
   write(log_unit,*) 'CPU time: ',tend-tstart,' s'
   write(log_unit,*) 'Wall clock time: ',(cntr2-cntr1)/countspersec,' s'
 
+  ! End the run
+  call mpi_end()
 
 end Program Capreole
 
