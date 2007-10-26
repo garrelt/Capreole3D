@@ -19,7 +19,7 @@ module grid
   !              volx, voly, volz
   ! 2005-04-20 - adapted for 3D
   
-  use file_admin, only: stdinput
+  use file_admin, only: stdinput, log_unit
   use precision, only: dp
   use scaling, only: SCLENG
   use sizes, only: nrOfDim,neq,mbc,CART
@@ -103,7 +103,8 @@ contains
           write (unit=*,fmt="(a)",advance="no") &
                "2) Size of grid box (specify units): "
           read (unit=stdinput,fmt=*) xlength,ylength,zlength,str_length_unit
-          write (unit=30,fmt="(a,3(e10.3),a)") "2) Size of grid box : ", &
+          write (unit=log_unit,fmt="(a,3(e10.3),a)") & 
+               "2) Size of grid box : ", &
                xlength,ylength,zlength,str_length_unit
           ! Convert to cms
           call convert_case(str_length_unit,0) ! conversion to lower case
