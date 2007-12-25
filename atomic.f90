@@ -3,7 +3,7 @@ module atomic
   ! Module for Capreole (f90)
   ! Author: Garrelt Mellema
   ! Date: 2003-06-01
-  ! This module is also accepted by the F compiler (Dec 9, 2003)
+  ! This module is also accepted by the F compiler (rechecked Dec 24, 2007)
 
   ! This module contains atomic constants and parameter definitions 
 

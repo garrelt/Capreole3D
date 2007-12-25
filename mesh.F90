@@ -13,7 +13,7 @@ module mesh
 
   use precision, only: dp
   use my_mpi
-  use file_admin, only: stdinput,log_unit
+  use file_admin, only: stdinput,log_unit,ah3
 
   implicit none
 
@@ -37,7 +37,7 @@ contains
     ! processors
 
     logical,intent(in) :: restart
-    character(len=19),intent(in) :: restartfile
+    character(len=*),intent(in) :: restartfile
 
     integer :: ierror=0
 
@@ -81,6 +81,7 @@ contains
   end subroutine init_mesh
 
   !========================================================================
+
   subroutine restart_mesh(filename,xmesh,ymesh,zmesh,ierror)
     
     ! This routine retrieved the mesh size
@@ -90,8 +91,8 @@ contains
     use sizes, only: nrOfDim, neq
     use atomic, only: gamma
 
-    character(len=19),intent(in) :: filename ! name of ah3 file
-    integer,intent(out)    :: xmesh,ymesh,zmesh ! 3D size of mesh
+    character(len=*),intent(in) :: filename ! name of ah3 file
+    integer,intent(out) :: xmesh,ymesh,zmesh ! 3D size of mesh
     integer,intent(out) :: ierror
 
     ! AH3D header variables
@@ -105,40 +106,38 @@ contains
     real(kind=dp) :: time      ! output time
 
     ! AH3D grid variables
-    integer :: igrid ! counters
-    real(kind=dp) :: x_corner,y_corner,z_corner
-    real(kind=dp) :: dx_in,dy_in,dz_in
-    integer :: level
 
     ierror=0
     
     ! Read in header
-    if (rank.eq.0) then
-       open(unit=40,file=filename,form='UNFORMATTED',status='old')
-       read(40) banner
-       read(40) nrOfDim_in
-       read(40) neq_in
-       read(40) npr_in
-       read(40) refinementFactor
-       read(40) nframe
-       read(40) gamma_in
-       read(40) time
+    if (rank == 0) then
+       open(unit=ah3,file=filename,form="unformatted",status="old", &
+            action="read")
+       read(unit=ah3) banner
+       read(unit=ah3) nrOfDim_in
+       read(unit=ah3) neq_in
+       read(unit=ah3) npr_in
+       read(unit=ah3) refinementFactor
+       read(unit=ah3) nframe
+       read(unit=ah3) gamma_in
+       read(unit=ah3) time
        
        ! Check for consistency
        if (nrOfDim_in /= nrOfDim .or. neq_in /= neq .or. npr_in /= npr .or. &
             gamma_in /= gamma ) then
           ierror=1
-          write(*,*) "Error: ah3 file inconsistent with program parameters"
+          write(unit=log_unit,fmt=*) &
+               "Error: ah3 file inconsistent with program parameters"
        endif
        
        if (ierror == 0) then
           ! Read in grids
           ! (each processor has its grid, we read in all and find the
           !  largest value to obtain the physical size of the full grid).
-          read(40) xmesh,ymesh,zmesh
+          read(unit=ah3) xmesh,ymesh,zmesh
        endif
 
-       close(40)
+       close(unit=ah3)
 
     endif
     
@@ -159,34 +158,36 @@ contains
   
   !----------------------------------------------------------------------------
 
-  subroutine MPE_DECOMP1D( n, numprocs, myid, s, e )
+  subroutine MPE_DECOMP1D (nmesh, numprocs, myid, startpnt, endpnt)
 
     ! This routine distributes n over the number of processors
     
     ! Input:
-    ! n        - number of grid cells
+    ! nmesh    - number of mesh cells
     ! numprocs - number of processors (to distribute over)
     ! myid     - id of current processor
     
     ! Output:
-    ! s - start index for current processor
-    ! e - end index for current processor
+    ! startpnt - start index for current processor
+    ! endpnt   - end index for current processor
 
-    integer,intent(in)  :: n, numprocs, myid
-    integer,intent(out) :: s, e
+    integer,intent(in)  :: nmesh, numprocs, myid
+    integer,intent(out) :: startpnt, endpnt
     integer ::  nlocal
     integer ::  deficit
     
-    nlocal  = n / numprocs
-    s = myid * nlocal + 1
-    deficit = n-int(n/numprocs)*numprocs !mod(n,numprocs)
-    s = s + min(myid,deficit)
+    nlocal  = nmesh / numprocs
+    startpnt = myid * nlocal + 1
+    deficit = nmesh-int(nmesh/numprocs)*numprocs !mod(nmesh,numprocs)
+    startpnt = startpnt + min(myid,deficit)
     if (myid < deficit) then
        nlocal = nlocal + 1
     endif
-    e = s + nlocal - 1
-    if (e > n .or. myid == numprocs-1) e = n
-    
+    endpnt = startpnt + nlocal - 1
+    if (endpnt > nmesh .or. myid == numprocs-1) then 
+       endpnt = nmesh
+    endif
+
   end subroutine MPE_DECOMP1D
   
 end module mesh

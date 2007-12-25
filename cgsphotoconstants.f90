@@ -39,7 +39,7 @@ module cgsphotoconstants
   !-----------------------------------------------------------------------
   real(kind=dp), parameter :: thigh=200000.0
   real(kind=dp), parameter :: tlow=2000.0
-  real(kind=dp), parameter :: frtop1=700.0*tlow/47979.72484*1e15
+  real(kind=dp), parameter :: frtop1=frthe1 !700.0*tlow/47979.72484*1e15
   real(kind=dp), parameter :: frtop2=5.88e-05*thigh*1e15
   
   real(kind=dp) :: tf2h,tf3h,tf3he0

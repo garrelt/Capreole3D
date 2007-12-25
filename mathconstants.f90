@@ -5,6 +5,6 @@ module mathconstants
   
   implicit none
 
-  real(kind=dp),parameter :: pi=3.141592654
+  real(kind=dp), public, parameter :: pi=3.141592654
   
 end module mathconstants

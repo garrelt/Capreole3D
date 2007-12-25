@@ -3,6 +3,8 @@ module cgsconstants
   use precision, only: dp
   use mathconstants, only: pi
 
+  public
+
   ! A collection of physical constants and conversion factors
   ! Units: cgs
 
