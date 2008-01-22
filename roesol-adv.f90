@@ -40,6 +40,7 @@ module hydrosolver
   integer,parameter,private :: MON_CEN=1
   integer,parameter,private :: VAN_LEER=2
   integer,parameter,private :: SUPERBEE=3
+  integer,parameter,private :: USE_LIMITER=SUPERBEE
 
   ! Transverse wave directions
   integer,parameter,private :: RIGHT=0
@@ -230,7 +231,7 @@ contains
        
        call split_waves (stadif,adq)
        
-       call flux_limiting (SUPERBEE)
+       call flux_limiting (USE_LIMITER)
        
        call calculate_state_change ()
     
