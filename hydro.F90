@@ -98,12 +98,17 @@ contains
 
     ! AH3D grid variables
     integer :: igrid ! counters
+    integer :: ieq
     integer :: xmesh,ymesh,zmesh
     real(kind=dp) :: x_corner,y_corner,z_corner
     real(kind=dp) :: dx_in,dy_in,dz_in
     integer :: level
+    real(kind=dp),dimension(:,:,:),allocatable :: temparray
+    real(kind=dp),dimension(:,:,:,:),allocatable :: temparray2
 
 #ifdef MPI
+    integer :: status(MPI_STATUS_SIZE)
+    integer :: request
     integer :: mpi_ierror
 #endif
 
@@ -160,8 +165,8 @@ contains
        
 #ifdef MPI
        ! Allocate temporary arrays for reading the state variables
-       allocate(temparray(ex-sx+1,ey-sy+1,ez-sz+1)
-       allocate(temparray2(ex-sx+1,ey-sy+1,ez-sz+1,neuler+1:neq)
+       allocate(temparray(ex-sx+1,ey-sy+1,ez-sz+1))
+       allocate(temparray2(ex-sx+1,ey-sy+1,ez-sz+1,neuler+1:neq))
        if (rank == 0) then
           ! read in for other processors
           do igrid=2,npr_in

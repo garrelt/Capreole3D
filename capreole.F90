@@ -79,11 +79,11 @@ Program Capreole
   ! Ask if this is a restart
   if (rank == 0) then
      write (*,'(A,$)') 'Restart of old run: (y/n): '
-     read (*,'(A1)') answer
+     read (unit=stdinput,fmt='(A1)') answer
      if (answer == 'y' .or. answer == 'Y') then
         restart=.true.
         write (*,'(A,$)') 'Output file from which to restart: '
-        read (*,*) restartfile
+        read (unit=stdinput,fmt=*) restartfile
      else
         restart=.false.
      endif
@@ -117,6 +117,7 @@ Program Capreole
   call cpu_time(tend)
   call system_clock(cntr2,countspersec)
 
+  ! Report times
   write(log_unit,*) 'CPU time: ',tend-tstart,' s'
   write(log_unit,*) 'Wall clock time: ',(cntr2-cntr1)/countspersec,' s'
 

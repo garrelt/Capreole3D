@@ -15,6 +15,7 @@ module evolution
   !             log_unit
 
   use precision, only: dp
+  use my_mpi
   use file_admin, only: log_unit
   use scaling, only: sctime
   use hydro, only: stold,stnew,state1,state2,state,NEW,OLD

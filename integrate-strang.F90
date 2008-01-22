@@ -9,6 +9,7 @@ module integrator
   ! Version: Strang splitting
  
   use precision, only: dp
+  use my_mpi
   use sizes, only: neq,neuler,nrOfDim,mbc
   use mesh, only: sx,ex,sy,ey,sz,ez,meshx,meshy,meshz
   use grid, only: dx,dy,dz,vol,volx

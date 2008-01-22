@@ -51,10 +51,11 @@ contains
     real(kind=dp) :: r_interface ! dummy needed for calling init_ionic
     integer :: ierror
 
-    ! Initialize the ionic concentrations
-    ! source position to be known before initializing the state
+    ! Initialize the ionic concentrations and all radiation
+    ! quantities (need to do this before initializing the
+    ! state since this needs the source position
     call init_ionic(restart,r_interface)
-
+    
     if (.not.restart) then ! Fresh start
 
        call fresh_start_state( )
@@ -75,7 +76,7 @@ contains
 
   !==========================================================================
 
-  subroutine fresh_start_state ()
+  subroutine fresh_start_state ( )
     
     ! This routine initializes all hydro variables for a fresh start
     
@@ -162,33 +163,35 @@ contains
   end subroutine fresh_start_state
 
   !==========================================================================
-
+  
   subroutine apply_grav_force(dt,newold)
-
+    
     ! Dummy routine
-
+    
     real(kind=dp),intent(in) :: dt
     integer,intent(in) :: newold
-
-  end subroutine apply_grav_force
     
+  end subroutine apply_grav_force
+  
   !==========================================================================
-
+  
   subroutine inflow (newold)
     
     ! This routine resets the inner boundary to the inflow condition
     ! Version: dummy
-
+    
     integer,intent(in) :: newold
-
+    
   end subroutine inflow
+  
+  !==========================================================================
   
   function unit_conversion(in_str_unit)
     
     real(kind=dp) :: unit_conversion
-
+    
     real(kind=dp) :: conversion_factor
-
+    
     character(len=10),intent(in) :: in_str_unit
     character(len=10) :: str_unit
     

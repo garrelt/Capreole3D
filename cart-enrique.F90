@@ -102,7 +102,7 @@ contains
     if (rank == 0) then
        write (*,'(//,A,/)') '----- Environment -----'
        write (*,'(A,$)') '1) File identifier (e.g. 0020): '
-       read (*,*) file_id
+       read (stdinput,*) file_id
        ! center on maximum density
        center_answer='max'
     endif

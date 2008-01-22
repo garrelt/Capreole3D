@@ -81,9 +81,9 @@ contains
     if (rank == 0) then
        write (*,'(//,A,/)') '----- Wind -----'
        write (*,'(A,$)') '1) Mass loss rate (M0/yr): '
-       read(*,*) dmdtwind
+       read(stdinput,*) dmdtwind
        write (*,'(A,$)') '2) Velocity (km/s): '
-       read (*,*) velowind
+       read (stdinput,*) velowind
     endif
 
     ! report input parameters
@@ -149,7 +149,7 @@ contains
     if (rank == 0) then
        write (*,'(//,A,/)') '----- Environment -----'
        write (*,'(A,$)') '1) File identifier (e.g. 0020): '
-       read (*,*) file_id
+       read (stdinput,*) file_id
        ! center on maximum density
        center_answer='max'
     endif
