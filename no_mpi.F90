@@ -3,7 +3,8 @@ module my_mpi
   ! Module for Capreole (3D)
   ! Author: Garrelt Mellema
   ! Date: 2003-06-01
-  ! This module is also accepted by the F compiler (Dec 9, 2003)
+  ! This module is also accepted by the F compiler (Nov 29, 2007)
+  ! !!!Apart from the hostnm call!!!
  
   ! This is a dummy module for systems where there is no MPI
   ! for F90.
@@ -43,6 +44,9 @@ module my_mpi
 
   integer,parameter,public :: MPI_PROC_NULL=-1
 
+  public :: mpi_setup,mpi_end
+  private :: mpi_basic,mpi_topology,fnd2dnbrs
+
 contains
 
   !----------------------------------------------------------------------------
@@ -62,7 +66,7 @@ contains
     ! Open processor dependent log file
     write(unit=number,fmt="(I4)") rank
     filename=trim(adjustl("log."//trim(adjustl(number))))
-    open(unit=log_unit,file=filename,status="unknown",action="write")
+    open(unit=log_unit,file=filename,status="replace",action="write")
 
     write(unit=log_unit,fmt=*) "Log file for rank ",rank
 
@@ -70,7 +74,7 @@ contains
     !$omp parallel default(shared)
     nthreads=omp_get_num_threads()
     !$omp end parallel
-    write(log_unit,*) ' Number of OpenMP threads is ',nthreads
+    write(unit=log_unit,fmt=*) " Number of OpenMP threads is ",nthreads
 
     ! Figure out hostname
     ! NOTE: compiler dependent!!!
@@ -78,22 +82,22 @@ contains
     tn=omp_get_thread_num()+1
     ierror=hostnm(hostname)
     if (ierror == 0) then
-       write(log_unit,*) &
-            'Thread number ',tn,' running on Processor ',hostname
+       write(unit=log_unit,fmt=*) &
+            "Thread number ',tn,' running on Processor ",hostname
     else 
-       write(log_unit,*) &
-            'Error establishing identity of processor for thread ',tn
+       write(unit=log_unit,fmt=*) &
+            "Error establishing identity of processor for thread ",tn
     endif
     !$omp end parallel
 #else
     ! Figure out hostname
     ! NOTE: compiler dependent!!!
-    ierror=hostnm(hostname)
+    !ierror=hostnm(hostname)
     if (ierror == 0) then
        write(unit=log_unit,fmt=*) "The Processor is ",hostname
     else 
-       write(log_unit,*) &
-            'Error establishing identity of processor for this rank'
+       write(unit=log_unit,fmt=*) &
+            "Error establishing identity of processor for this rank"
     endif
 #endif
 
