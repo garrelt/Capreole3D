@@ -14,6 +14,8 @@ module problem
 
   ! This version: steady shock interacting with elliptical cloud
   !  (cartesian coordinates).
+  ! Can be used for Test 7 of the Cosmological Radiative Transfer Comparison
+  ! Project
 
   use file_admin, only: stdinput
   use precision, only: dp
@@ -88,10 +90,13 @@ contains
     real(kind=dp)    :: edensity,etemperature,vblast
     real(kind=dp)    :: wdensity,wtemperature,x0,y0,z0,axis
     real(kind=dp)    :: axis1,axis2,axis3,rotangle1,rotangle2
-    real(kind=dp)    :: epressr,wpressr,vs1,xm1,fp,shckdist
-    real(kind=dp)    :: xc,yc,zc,xr1,yr1,xr2,zr2
+    real(kind=dp)    :: epressr,wpressr,vs1,xm1,shckdist
+    real(kind=dp)    :: dens_val,pres_val
+    real(kind=dp),dimension(8) :: fp
+    real(kind=dp),dimension(10,10,10) :: fp3d
+    real(kind=dp)    :: hdx,hdy,hdz
 
-    integer :: i,j,k,nitt,ieq
+    integer :: i,j,k,nitt,ieq,ii,jj,kk
 
     character(len=10) :: str_length_unit,str_a1_unit,str_a2_unit,str_a3_unit
 #ifdef MPI       
@@ -236,45 +241,86 @@ contains
     ! the clump properies if we are inside and the unshocked environment
     ! if outdside
     
+    hdx=0.5*dx
+    hdy=0.5*dy
+    hdz=0.5*dz
     do k=sz-mbc,ez+mbc
        do j=sy-mbc,ey+mbc
           do i=sx-mbc,ex+mbc
-             xc=x(i)-x0
-             yc=y(j)-y0
-             zc=z(k)-z0
-             
-             xr1 =  cos(rotangle1)*xc+sin(rotangle1)*yc
-             yr1 = -sin(rotangle1)*xc+cos(rotangle1)*yc
-             
-             xr2 = cos(rotangle2)*xr1+sin(rotangle2)*zc
-             zr2 = -sin(rotangle2)*xr1+cos(rotangle2)*zc
-             
-             fp=sqrt(xr2*xr2/(axis1*axis1)+yr1*yr1/(axis2*axis2)+ &
-                  zr2*zr2/(axis3*axis3))
-             
-             if (fp <= 1.0) then
+             fp(1)=ellipse(x(i)+hdx,y(j)+hdy,z(k)+hdz, &
+                  x0,y0,z0,rotangle1,rotangle2,axis1, &
+                  axis2,axis3)
+             fp(2)=ellipse(x(i)-hdx,y(j)+hdy,z(k)+hdz, &
+                  x0,y0,z0,rotangle1,rotangle2,axis1, &
+                  axis2,axis3)
+             fp(3)=ellipse(x(i)+hdx,y(j)-hdy,z(k)+hdz, &
+                  x0,y0,z0,rotangle1,rotangle2,axis1, &
+                  axis2,axis3)
+             fp(4)=ellipse(x(i)-hdx,y(j)-hdy,z(k)+hdz, &
+                  x0,y0,z0,rotangle1,rotangle2,axis1, &
+                  axis2,axis3)
+             fp(5)=ellipse(x(i)+hdx,y(j)+hdy,z(k)-hdz, &
+                  x0,y0,z0,rotangle1,rotangle2,axis1, &
+                  axis2,axis3)
+             fp(6)=ellipse(x(i)-hdx,y(j)+hdy,z(k)-hdz, &
+                  x0,y0,z0,rotangle1,rotangle2,axis1, &
+                  axis2,axis3)
+             fp(7)=ellipse(x(i)+hdx,y(j)-hdy,z(k)-hdz, &
+                  x0,y0,z0,rotangle1,rotangle2,axis1, &
+                  axis2,axis3)
+             fp(8)=ellipse(x(i)-hdx,y(j)-hdy,z(k)-hdz, &
+                  x0,y0,z0,rotangle1,rotangle2,axis1, &
+                  axis2,axis3)
+
+             if (maxval(fp) <= 1.0) then
                 state(i,j,k,RHO)=wdensity
                 state(i,j,k,RHVX)=0.0d0
                 state(i,j,k,RHVY)=0.0d0
                 state(i,j,k,RHVZ)=0.0d0
                 pressr(i,j,k)=wpressr
-                state(i,j,k,EN)=pressr(i,j,k)/gamma1+ &
-                     0.5d0*(state(i,j,k,RHVX)*state(i,j,k,RHVX)+ &
-                     state(i,j,k,RHVY)*state(i,j,k,RHVY)+ &
-                     state(i,j,k,RHVZ)*state(i,j,k,RHVZ))/state(i,j,k,RHO)
                 !state(i,j,k,TRACER1)=1.0d0
-             else
+             elseif (minval(fp) >= 1.0) then
                 state(i,j,k,RHO)=edensity
                 state(i,j,k,RHVX)=0.0d0
                 state(i,j,k,RHVY)=0.0d0
                 state(i,j,k,RHVZ)=0.0d0
                 pressr(i,j,k)=epressr
-                state(i,j,k,EN)=pressr(i,j,k)/gamma1+ &
-                     0.5d0*(state(i,j,k,RHVX)*state(i,j,k,RHVX)+ &
-                     state(i,j,k,RHVY)*state(i,j,k,RHVY)+ &
-                     state(i,j,k,RHVZ)*state(i,j,k,RHVZ))/state(i,j,k,RHO)
                 !state(i,j,k,TRACER1)=-1.0d0
+             else
+                ! do weighting
+                dens_val=0.0
+                pres_val=0.0
+                do kk=1,10
+                   do jj=1,10
+                      do ii=1,10
+                         fp3d(ii,jj,kk)=ellipse( &
+                              x(i)-hdx+(real(ii-1)+0.5)*dx*0.1, &
+                              y(j)-hdy+(real(jj-1)+0.5)*dy*0.1, &
+                              z(k)-hdz+(real(kk-1)+0.5)*dz*0.1, &
+                              x0,y0,z0,rotangle1,rotangle2,axis1, &
+                              axis2,axis3)
+                         if (fp3d(ii,jj,kk) <= 1.0) then
+                            dens_val=dens_val + wdensity
+                            pres_val=pres_val + wpressr
+                         else
+                            dens_val=dens_val + edensity
+                            pres_val=pres_val + epressr
+                         endif
+                      enddo
+                   enddo
+                enddo
+                dens_val=dens_val*1e-3
+                pres_val=pres_val*1e-3
+                state(i,j,k,RHO)=dens_val
+                state(i,j,k,RHVX)=0.0d0
+                state(i,j,k,RHVY)=0.0d0
+                state(i,j,k,RHVZ)=0.0d0
+                pressr(i,j,k)=pres_val
              endif
+             state(i,j,k,EN)=pressr(i,j,k)/gamma1+ &
+                  0.5d0*(state(i,j,k,RHVX)*state(i,j,k,RHVX)+ &
+                  state(i,j,k,RHVY)*state(i,j,k,RHVY)+ &
+                  state(i,j,k,RHVZ)*state(i,j,k,RHVZ))/state(i,j,k,RHO)
           enddo
        enddo
     enddo
@@ -424,5 +470,39 @@ contains
     unit_conversion=conversion_factor
     
   end function unit_conversion
+
+  function ellipse (x,y,z,x0,y0,z0,angle1,angle2,axis1,axis2,axis3)
+    
+    real(kind=dp) :: ellipse
+
+    real(kind=dp),intent(in) :: x
+    real(kind=dp),intent(in) :: y
+    real(kind=dp),intent(in) :: z
+    real(kind=dp),intent(in) :: x0
+    real(kind=dp),intent(in) :: y0
+    real(kind=dp),intent(in) :: z0
+    real(kind=dp),intent(in) :: angle1
+    real(kind=dp),intent(in) :: angle2
+    real(kind=dp),intent(in) :: axis1
+    real(kind=dp),intent(in) :: axis2
+    real(kind=dp),intent(in) :: axis3
+    
+    real(kind=dp) :: xc,yc,zc
+    real(kind=dp) :: xr1,yr1,xr2,zr2
+
+    xc=x-x0
+    yc=y-y0
+    zc=z-z0
+    
+    xr1 =  cos(angle1)*xc+sin(angle1)*yc
+    yr1 = -sin(angle1)*xc+cos(angle1)*yc
+    
+    xr2 = cos(angle2)*xr1+sin(angle2)*zc
+    zr2 = -sin(angle2)*xr1+cos(angle2)*zc
+    
+    ellipse=sqrt(xr2*xr2/(axis1*axis1)+yr1*yr1/(axis2*axis2)+ &
+         zr2*zr2/(axis3*axis3))
+    
+  end function ellipse
 
 end module problem

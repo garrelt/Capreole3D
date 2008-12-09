@@ -13,6 +13,7 @@ module problem
   ! inflow - sets the inflow boundary conditions
 
   ! This version: 1/r^2 density profile with flat core (cartesian coordinates).
+  ! This is Test 6 from the Cosmological Radiative Transfer Comparison Project
 
   use file_admin, only: stdinput
   use precision, only: dp
@@ -84,8 +85,12 @@ contains
     
     real(kind=dp) :: r_core,dens_core,etemperature
     real(kind=dp) :: dens_val,xs,ys,zs,dist
-
-    integer :: i,j,k,nitt,ieq
+    real(kind=dp) :: mindist,maxdist
+    real(kind=dp) :: hdx,hdy,hdz,r_core2
+    real(kind=dp),dimension(0:8) :: dist2
+    real(kind=dp),dimension(10,10,10) :: dist3d
+    
+    integer :: i,j,k,nitt,ieq,ii,jj,kk
     character(len=10) :: str_length_unit
 
 #ifdef MPI       
@@ -133,18 +138,53 @@ contains
     
     ! Calculate the initial state
     ! Source position determines the core location
+    hdx=0.5*dx
+    hdy=0.5*dy
+    hdz=0.5*dz
+    r_core2=r_core*r_core
     do k=sz-mbc,ez+mbc
        do j=sy-mbc,ey+mbc
           do i=sx-mbc,ex+mbc
              xs=x(i)-rsrcpos(1)
              ys=y(j)-rsrcpos(2)
              zs=z(k)-rsrcpos(3)
-             dist=sqrt(xs*xs+ys*ys+zs*zs)
-             if (dist.le.r_core) then
+             dist2(0)=((xs)*(xs)+(ys)*(ys)+(zs)*(zs))
+             dist2(1)=((xs+hdx)*(xs+hdx)+(ys+hdy)*(ys+hdy)+(zs+hdz)*(zs+hdz))
+             dist2(2)=((xs-hdx)*(xs-hdx)+(ys+hdy)*(ys+hdy)+(zs+hdz)*(zs+hdz))
+             dist2(3)=((xs+hdx)*(xs+hdx)+(ys-hdy)*(ys-hdy)+(zs+hdz)*(zs+hdz))
+             dist2(4)=((xs+hdx)*(xs+hdx)+(ys+hdy)*(ys+hdy)+(zs-hdz)*(zs-hdz))
+             dist2(5)=((xs-hdx)*(xs-hdx)+(ys-hdy)*(ys-hdy)+(zs+hdz)*(zs+hdz))
+             dist2(6)=((xs+hdx)*(xs+hdx)+(ys-hdy)*(ys-hdy)+(zs-hdz)*(zs-hdz))
+             dist2(7)=((xs-hdx)*(xs-hdx)+(ys+hdy)*(ys+hdy)+(zs-hdz)*(zs-hdz))
+             dist2(8)=((xs-hdx)*(xs-hdx)+(ys-hdy)*(ys-hdy)+(zs-hdz)*(zs-hdz))
+             mindist=minval(dist2)
+             maxdist=maxval(dist2)
+             if (maxdist <= r_core2) then
                 ! Flat core
                 dens_val=dens_core
+             elseif (mindist > r_core2) then
+                ! r^-2 environment
+                dens_val=dens_core*(dist2(0)/r_core2)
              else
-                dens_val=dens_core*(dist/r_core)**(-2.0)
+                ! do weighting
+                dens_val=0.0
+                do kk=1,10
+                   do jj=1,10
+                      do ii=1,10
+                         dist3d(ii,jj,kk)= &
+                              (xs-hdx +(real(ii-1)+0.5)*dx*0.1)**2 +  &
+                              (ys-hdy +(real(jj-1)+0.5)*dy*0.1)**2 +  & 
+                              (zs-hdz +(real(kk-1)+0.5)*dz*0.1)**2
+                         if (dist3d(ii,jj,kk) <= r_core2) then
+                            dens_val=dens_val + dens_core
+                         else
+                            dens_val=dens_val + &
+                                 dens_core*(dist3d(ii,jj,kk)/r_core2)
+                         endif
+                      enddo
+                   enddo
+                enddo
+                dens_val=dens_val*1e-3
              endif
              state(i,j,k,RHO)=n2rho(dens_val)/scdens
              state(i,j,k,RHVX)=0.0d0
@@ -159,7 +199,7 @@ contains
           enddo
        enddo
     enddo
-    
+
   end subroutine fresh_start_state
 
   !==========================================================================
