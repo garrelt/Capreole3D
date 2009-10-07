@@ -88,7 +88,8 @@ contains
     real(kind=dp) :: mindist,maxdist
     real(kind=dp) :: hdx,hdy,hdz,r_core2
     real(kind=dp),dimension(0:8) :: dist2
-    real(kind=dp),dimension(10,10,10) :: dist3d
+    integer,parameter :: nwght = 20
+    real(kind=dp),dimension(nwght,nwght,nwght) :: dist3d
     
     integer :: i,j,k,nitt,ieq,ii,jj,kk
     character(len=10) :: str_length_unit
@@ -164,27 +165,27 @@ contains
                 dens_val=dens_core
              elseif (mindist > r_core2) then
                 ! r^-2 environment
-                dens_val=dens_core*(dist2(0)/r_core2)
+                dens_val=dens_core*(r_core2/dist2(0))
              else
                 ! do weighting
                 dens_val=0.0
-                do kk=1,10
-                   do jj=1,10
-                      do ii=1,10
+                do kk=1,nwght
+                   do jj=1,nwght
+                      do ii=1,nwght
                          dist3d(ii,jj,kk)= &
-                              (xs-hdx +(real(ii-1)+0.5)*dx*0.1)**2 +  &
-                              (ys-hdy +(real(jj-1)+0.5)*dy*0.1)**2 +  & 
-                              (zs-hdz +(real(kk-1)+0.5)*dz*0.1)**2
+                              (xs-hdx +(real(ii-1)+0.5)*dx/real(nwght))**2 +  &
+                              (ys-hdy +(real(jj-1)+0.5)*dy/real(nwght))**2 +  &
+                              (zs-hdz +(real(kk-1)+0.5)*dz/real(nwght))**2
                          if (dist3d(ii,jj,kk) <= r_core2) then
                             dens_val=dens_val + dens_core
                          else
                             dens_val=dens_val + &
-                                 dens_core*(dist3d(ii,jj,kk)/r_core2)
+                                 dens_core*(r_core2/dist3d(ii,jj,kk))
                          endif
                       enddo
                    enddo
                 enddo
-                dens_val=dens_val*1e-3
+                dens_val=dens_val/real(nwght)**3
              endif
              state(i,j,k,RHO)=n2rho(dens_val)/scdens
              state(i,j,k,RHVX)=0.0d0
