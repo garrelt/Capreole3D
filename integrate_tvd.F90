@@ -234,8 +234,8 @@ contains
           enddo
           do ieq=neuler+1,neq
              do i=sx,ex
-                stnew(i,j,k,ieq)=stold(i,j,k,ieq)+ &
-                     dstate(i-ioff,ieq)/stnew(i,j,k,RHO)
+                stnew(i,j,k,ieq)=(stold(i,j,k,ieq)*stold(i,j,k,RHO)+ &
+                     dstate(i-ioff,ieq))/stnew(i,j,k,RHO)
              enddo
           enddo
 
@@ -307,12 +307,12 @@ contains
                 stnew(i,j,k,ieq)=stold(i,j,k,ieq)+dstate(j-joff,ieq)
              enddo
           enddo
-          do ieq=neuler+1,neq
-             do j=sy,ey
-                stnew(i,j,k,ieq)=stold(i,j,k,ieq) + &
-                     dstate(j-joff,ieq)/stnew(i,j,k,RHO)
-             enddo
-          enddo
+          !do ieq=neuler+1,neq
+          !   do j=sy,ey
+          !      stnew(i,j,k,ieq)=stold(i,j,k,ieq) + &
+          !           dstate(j-joff,ieq)/stnew(i,j,k,RHO)
+          !   enddo
+          !enddo
 
        enddo iloop
     enddo kloop
@@ -381,12 +381,12 @@ contains
                 stnew(i,j,k,ieq)=stold(i,j,k,ieq)+dstate(k-koff,ieq)
              enddo
           enddo
-          do ieq=neuler+1,neq
-             do k=sz,ez
-                stnew(i,j,k,ieq)=stold(i,j,k,ieq) + &
-                     dstate(k-koff,ieq)/stnew(i,j,k,RHO)
-             enddo
-          enddo
+          !do ieq=neuler+1,neq
+          !   do k=sz,ez
+          !      stnew(i,j,k,ieq)=stold(i,j,k,ieq) + &
+          !           dstate(k-koff,ieq)/stnew(i,j,k,RHO)
+          !   enddo
+          !enddo
 
        enddo iloop
     enddo jloop
