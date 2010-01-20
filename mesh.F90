@@ -19,93 +19,99 @@ module mesh
 
   private
 
-  integer,public :: meshx,meshy,meshz ! total grid size in x, y, z
-  integer,public :: sx,ex,sy,ey,sz,ez ! local grid start and end coordinates
+  integer,public :: meshx !< total mesh size in x, y, z
+  integer,public :: meshy !< total mesh size in x, y, z
+  integer,public :: meshz !< total mesh size in x, y, z
+  integer,public :: sx !< local mesh start and end coordinates
+  integer,public :: ex !< local mesh start and end coordinates
+  integer,public :: sy !< local mesh start and end coordinates
+  integer,public :: ey !< local mesh start and end coordinates
+  integer,public :: sz !< local mesh start and end coordinates
+  integer,public :: ez !< local mesh start and end coordinates
 
-  public :: init_mesh
+  public :: init_mesh !< subroutine to initialize mesh
 
 #ifdef MPI
-  integer :: mpi_ierror
+  integer :: mpi_ierror !< mpi error flag
 #endif
 
 contains
 
   !----------------------------------------------------------------------------
 
+  !> Read in the mesh dimensions, and distribute them over the
+  !! processors
   subroutine init_mesh (restart,restartfile)
-    ! Read in the grid dimensions, and distribute them over the
-    ! processors
 
-    logical,intent(in) :: restart
-    character(len=*),intent(in) :: restartfile
+    logical,intent(in) :: restart !< restart or not
+    character(len=*),intent(in) :: restartfile !< name of restart file
 
-    integer :: ierror=0
+    integer :: ierror=0 !< error flag
 
-    if (.not.restart) then ! Fresh start
-       
-       if (rank == 0) then
-          print "(2/,A,/)", "----- Grid -----"
-          write(unit=*,fmt="(a)",advance="no") "1) Number of grid points: "
+    ! Ask for the input if you are processor 0.
+    if (rank == 0) then
+       if (.not.restart) then ! Fresh start
+          
+          ! Ask for input
+          print "(2/,A,/)", "----- Mesh -----"
+          write(unit=*,fmt="(a)",advance="no") "1) Number of mesh points: "
           read (unit=stdinput,fmt=*) meshx,meshy,meshz
           
-          ! Report
-          write(unit=log_unit,fmt="(2/,A,/)") "----- Grid -----"
-          write(unit=log_unit,fmt="(A,3I5)") "1) Number of grid points: ", &
+          ! Report back mesh
+          write(unit=log_unit,fmt="(2/,A,/)") "----- Mesh -----"
+          write(unit=log_unit,fmt="(A,3I5)") "1) Number of mesh points: ", &
                meshx,meshy,meshz
+       else
+          
+          ! Set mesh from restart file
+          call restart_mesh(restartfile,meshx,meshy,meshz,ierror)
+          
        endif
 
-    else
-       ! Ask for the input if you are processor 0.
-       if (rank == 0) then
-          call restart_mesh(restartfile,meshx,meshy,meshz,ierror)
-       endif
     endif
 
 #ifdef MPI
-    ! Distribute the total grid size over all processors
+    ! Distribute the total mesh size over all processors
     call MPI_BCAST(meshx,1,MPI_INTEGER,0,MPI_COMM_NEW,mpi_ierror)
     call MPI_BCAST(meshy,1,MPI_INTEGER,0,MPI_COMM_NEW,mpi_ierror)
     call MPI_BCAST(meshz,1,MPI_INTEGER,0,MPI_COMM_NEW,mpi_ierror)
 #endif
 
-    ! Compute the decomposition of the grid over the processors
+    ! Compute the decomposition of the mesh over the processors
     ! (find 3D decomposition)
     ! sx = start x coordinate, ex = end x coordinate
     ! sy = start y coordinate, ey = end y coordinate
     ! sz = start z coordinate, ez = end z coordinate
     call fnd3ddecomp ()
 
-    ! Report the grid for the local processor
-    write(unit=log_unit,fmt=*) "Grid: ",sx,ex,sy,ey,sz,ez
+    ! Report the mesh for the local processor
+    write(unit=log_unit,fmt=*) "Local mesh: ",sx,ex,sy,ey,sz,ez
     
   end subroutine init_mesh
 
-  !========================================================================
-
-  subroutine restart_mesh(filename,xmesh,ymesh,zmesh,ierror)
+  !> This routine retrieved the mesh size
+  !! (xmesh,ymesh,zmesh) from the ah3 file 'filename'.
+  !! Should be called from module mesh
+  subroutine restart_mesh (filename,xmesh,ymesh,zmesh,ierror)
     
-    ! This routine retrieved the mesh size
-    ! (xmesh,ymesh,zmesh) from the ah3 file filename.
-    ! Should be called from module mesh
-
     use sizes, only: nrOfDim, neq
     use atomic, only: gamma
 
-    character(len=*),intent(in) :: filename ! name of ah3 file
-    integer,intent(out) :: xmesh,ymesh,zmesh ! 3D size of mesh
-    integer,intent(out) :: ierror
+    character(len=*),intent(in) :: filename !< name of ah3 file
+    integer,intent(out) :: xmesh,ymesh,zmesh !< 3D size of mesh
+    integer,intent(out) :: ierror !< error flag
 
     ! AH3D header variables
-    character(len=80) :: banner
-    integer :: nrOfDim_in ! corresponds to parameter nrOfDim (no. of dimensions)
-    integer :: neq_in     ! corresponds to parameter neq (no. of equations)
-    integer :: npr_in     ! corresponds to parameter npr (no. of processors)
-    integer :: refinementFactor ! not used
-    integer :: nframe           ! output counter
-    real(kind=dp) :: gamma_in  ! corresponds to parameter gamma (adiab. index)
-    real(kind=dp) :: time      ! output time
+    character(len=80) :: banner !< AH3 ID string
+    integer :: nrOfDim_in !< corresponds to parameter nrOfDim (no. of dimensions)
+    integer :: neq_in     !< corresponds to parameter neq (no. of equations)
+    integer :: npr_in     !< corresponds to parameter npr (no. of processors)
+    integer :: refinementFactor !< not used
+    integer :: nframe           !< output counter
+    real(kind=dp) :: gamma_in  !< corresponds to parameter gamma (adiab. index)
+    real(kind=dp) :: time      !< output time
 
-    ! AH3D grid variables
+    ! AH3D mesh variables
 
     ierror=0
     
@@ -130,10 +136,8 @@ contains
                "Error: ah3 file inconsistent with program parameters"
        endif
        
+       ! Read in mesh
        if (ierror == 0) then
-          ! Read in grids
-          ! (each processor has its grid, we read in all and find the
-          !  largest value to obtain the physical size of the full grid).
           read(unit=ah3) xmesh,ymesh,zmesh
        endif
 
@@ -143,38 +147,23 @@ contains
     
   end subroutine restart_mesh
 
-  !----------------------------------------------------------------------------
-
-  subroutine fnd3ddecomp ()
-    
-    ! This routine makes the decomposition of the 3D grid into 
-    ! local processor grids
-
-    call MPE_DECOMP1D( meshx, dims(1), grid_struct(1), sx, ex )
-    call MPE_DECOMP1D( meshy, dims(2), grid_struct(2), sy, ey )
-    call MPE_DECOMP1D( meshz, dims(3), grid_struct(3), sz, ez )
-    
-  end subroutine fnd3ddecomp
-  
-  !----------------------------------------------------------------------------
-
+  !> This routine distributes n over the number of processors<br>
+  !! Input:<br>
+  !! nmesh    - number of mesh cells<br>
+  !! numprocs - number of processors (to distribute over)<br>
+  !! myid     - id of current processor<br>
+  !! Output:<br>
+  !! startpnt - start index for current processor<br>
+  !! endpnt   - end index for current processor
   subroutine MPE_DECOMP1D (nmesh, numprocs, myid, startpnt, endpnt)
 
-    ! This routine distributes n over the number of processors
-    
-    ! Input:
-    ! nmesh    - number of mesh cells
-    ! numprocs - number of processors (to distribute over)
-    ! myid     - id of current processor
-    
-    ! Output:
-    ! startpnt - start index for current processor
-    ! endpnt   - end index for current processor
-
-    integer,intent(in)  :: nmesh, numprocs, myid
-    integer,intent(out) :: startpnt, endpnt
-    integer ::  nlocal
-    integer ::  deficit
+    integer,intent(in)  :: nmesh !< number of mesh cells
+    integer,intent(in)  :: numprocs !< number of processors (to distribute over)
+    integer,intent(in)  :: myid !< id of current processor
+    integer,intent(out) :: startpnt !< start index for current processor
+    integer,intent(out) :: endpnt !< end index for current processor
+    integer ::  nlocal !< local number of mesh points
+    integer ::  deficit !< deficit if nlocal is not a factor of nmesh
     
     nlocal  = nmesh / numprocs
     startpnt = myid * nlocal + 1
@@ -190,5 +179,14 @@ contains
 
   end subroutine MPE_DECOMP1D
   
+  !> This routine makes the decomposition of the 3D mesh into 
+  !! local processor meshes
+  subroutine fnd3ddecomp ( )
+    
+    call MPE_DECOMP1D ( meshx, dims(1), grid_struct(1), sx, ex )
+    call MPE_DECOMP1D ( meshy, dims(2), grid_struct(2), sy, ey )
+    call MPE_DECOMP1D ( meshz, dims(3), grid_struct(3), sz, ez )
+    
+  end subroutine fnd3ddecomp
+  
 end module mesh
-
