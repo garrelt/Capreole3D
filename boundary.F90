@@ -12,7 +12,7 @@ module boundary
 
   use precision, only: dp
   use my_mpi
-  use sizes, only: neq, mbc
+  use sizes, only: neq, mbc, RHO, RHVX, RHVY, RHVZ, EN, nrofDim
   use mesh, only: sx,ex,sy,ey,sz,ez
   use grid, only: vol,volx
   use geometry, only: presfunc
@@ -21,16 +21,21 @@ module boundary
 
   implicit none
 
+  ! Define outflow types
+  integer,parameter :: REFLECTIVE=-1
+  integer,parameter :: OUTFLOW=1
+
 contains
 
   !=======================================================================
 
-  subroutine exchngxy (newold)
+  subroutine exchngxy (newold,domainboundaryconditions)
     
     ! This routine exchanges boundary cells between neighbours
     ! extend of boundary: mbc
 
     integer,intent(in) :: newold
+    integer,dimension(nrOfDim,2),intent(in) :: domainboundaryconditions
 
 #ifdef MPI
     real(kind=dp),dimension(mbc,1-mbc:ey-sy+1+mbc,1-mbc:ez-sz+1+mbc,neq) :: &
@@ -81,12 +86,18 @@ contains
     ! Account for non-existing neighbours, these are real boundaries
     ! the [inner,outer][x,y]bound routines need to be supplied
 
-    if (nbrleft == MPI_PROC_NULL) call innerxbound(newold )
-    if (nbrright == MPI_PROC_NULL) call outerxbound(newold )
-    if (nbrdown == MPI_PROC_NULL) call innerybound(newold )
-    if (nbrup == MPI_PROC_NULL)   call outerybound(newold )
-    if (nbrbelow == MPI_PROC_NULL) call innerzbound(newold )
-    if (nbrabove == MPI_PROC_NULL)   call outerzbound(newold )
+    if (nbrleft == MPI_PROC_NULL) &
+         call innerxbound(newold,domainboundaryconditions(1,1) )
+    if (nbrright == MPI_PROC_NULL) &
+         call outerxbound(newold,domainboundaryconditions(1,2) )
+    if (nbrdown == MPI_PROC_NULL) &
+         call innerybound(newold,domainboundaryconditions(2,1) )
+    if (nbrup == MPI_PROC_NULL)   &
+         call outerybound(newold,domainboundaryconditions(2,2) )
+    if (nbrbelow == MPI_PROC_NULL) &
+         call innerzbound(newold,domainboundaryconditions(3,1) )
+    if (nbrabove == MPI_PROC_NULL) &
+         call outerzbound(newold,domainboundaryconditions(3,2) )
 
 #ifdef MPI
     ! Sizes in x and y direction
@@ -293,161 +304,236 @@ contains
 
   !==========================================================================
 
-  subroutine innerxbound (newold)
+  subroutine innerxbound (newold, boundarycondition)
     
     ! This routine resets the inner x boundary
     
     integer :: i,j,k,ieq
     
     integer,intent(in) :: newold
+    integer,intent(in) :: boundarycondition
 
     state => set_state_pointer(newold)
 
-    do ieq=1,neq
+    select case (boundarycondition)
+    case (REFLECTIVE)
        do k=sz-mbc,ez+mbc
           do j=sy-mbc,ey+mbc
              do i=sx-mbc,sx-1
-!          state(i,j,1)=state(2*sx-1-i,j,1)
-!          state(i,j,2)=-state(2*sx-1-i,j,2)
-!          state(i,j,neuler-1:neq)=state(2*sx-1-i,j,neuler-1:neq)
-                state(i,j,k,ieq)=state(sx,j,k,ieq)
+                state(i,j,k,RHO)=state(2*sx-1-i,j,k,RHO)
+                state(i,j,k,RHVX)=-state(2*sx-1-i,j,k,RHVX)
+                state(i,j,k,RHVY:neq)=state(2*sx-1-i,j,k,RHVY:neq)
              enddo
           enddo
        enddo
-    enddo
-!    do j=sy-mbc,ey+mbc
-!       do i=sx-mbc,sx-1
-!       enddo
-!    enddo
-    
+    case(OUTFLOW)
+       do ieq=1,neq
+          do k=sz-mbc,ez+mbc
+             do j=sy-mbc,ey+mbc
+                do i=sx-mbc,sx-1
+                   state(i,j,k,ieq)=state(sx,j,k,ieq)
+                enddo
+             enddo
+          enddo
+       enddo
+    end select
+
   end subroutine innerxbound
 
   !==========================================================================
 
-  subroutine outerxbound (newold)
+  subroutine outerxbound (newold, boundarycondition)
 
     ! This routine resets the outer x boundary
 
     integer :: i,j,k,ieq
     
     integer,intent(in) :: newold
+    integer,intent(in) :: boundarycondition
 
     state => set_state_pointer(newold)
 
-    do ieq=1,neq
+    select case (boundarycondition)
+    case (REFLECTIVE)
        do k=sz-mbc,ez+mbc
           do j=sy-mbc,ey+mbc
              do i=ex+1,ex+mbc
-                state(i,j,k,ieq)=state(ex,j,k,ieq)
+                state(i,j,k,RHO)=state(2*ex+1-i,j,k,RHO)
+                state(i,j,k,RHVX)=-state(2*ex+1-i,j,k,RHVX)
+                state(i,j,k,RHVY:neq)=state(2*ex+1-i,j,k,RHVY:neq)
              enddo
           enddo
        enddo
-    enddo
+    case(OUTFLOW)
+       do ieq=1,neq
+          do k=sz-mbc,ez+mbc
+             do j=sy-mbc,ey+mbc
+                do i=ex+1,ex+mbc
+                   state(i,j,k,ieq)=state(ex,j,k,ieq)
+                enddo
+             enddo
+          enddo
+       enddo
+    end select
 
   end subroutine outerxbound
 
   !==========================================================================
 
-  subroutine innerybound (newold)
+  subroutine innerybound (newold, boundarycondition)
 
     ! This routine resets the inner y boundary
 
     integer :: i,j,k,ieq
 
     integer,intent(in) :: newold
+    integer,intent(in) :: boundarycondition
 
     state => set_state_pointer(newold)
 
-    do ieq=1,neq
+    select case (boundarycondition)
+    case (REFLECTIVE)
        do k=sz-mbc,ez+mbc
           do j=sy-mbc,sy-1
              do i=sx-mbc,ex+mbc
-                !          state(i,j,1)=state(i,2*sy-1-j,1)
-                !          state(i,j,2)=state(i,2*sy-1-j,2)
-                !          state(i,j,3)=-state(i,2*sy-1-j,3)
-                !          state(i,j,neuler:neq)=state(i,2*sy-1-j,neuler:neq)
-                state(i,j,k,ieq)=state(i,sy,k,ieq)
+                state(i,j,k,RHO)=state(i,2*sy-1-j,k,RHO)
+                state(i,j,k,RHVX)=state(i,2*sy-1-j,k,RHVX)
+                state(i,j,k,RHVY)=-state(i,2*sy-1-j,k,RHVY)
+                state(i,j,k,RHVZ:neq)=state(i,2*sy-1-j,k,RHVZ:neq)
              enddo
           enddo
        enddo
-    enddo
-    !    do i=sx-mbc,ex+mbc
-    !       do j=sy-mbc,sy-1
-    !       enddo
-    !    enddo
-    
+    case(OUTFLOW)
+       do ieq=1,neq
+          do k=sz-mbc,ez+mbc
+             do j=sy-mbc,sy-1
+                do i=sx-mbc,ex+mbc
+                   state(i,j,k,ieq)=state(i,sy,k,ieq)
+                enddo
+             enddo
+          enddo
+       enddo
+    end select
+
   end subroutine innerybound
 
   !==========================================================================
 
-  subroutine outerybound (newold)
+  subroutine outerybound (newold, boundarycondition)
 
     ! This routine resets the outer y boundary
 
     integer :: i,j,k,ieq
 
     integer,intent(in) :: newold
+    integer,intent(in) :: boundarycondition
 
     state => set_state_pointer(newold)
 
-    do ieq=1,neq
+    select case (boundarycondition)
+    case (REFLECTIVE)
        do k=sz-mbc,ez+mbc
           do j=ey+1,ey+mbc
              do i=sx-mbc,ex+mbc
-                state(i,j,k,ieq)=state(i,ey,k,ieq)
+                state(i,j,k,RHO)=state(i,2*ey+1-j,k,RHO)
+                state(i,j,k,RHVX)=state(i,2*ey+1-j,k,RHVX)
+                state(i,j,k,RHVY)=-state(i,2*ey+1-j,k,RHVY)
+                state(i,j,k,RHVZ:neq)=state(i,2*ey+1-j,k,RHVZ:neq)
              enddo
           enddo
        enddo
-    enddo
+    case(OUTFLOW)
+       do ieq=1,neq
+          do k=sz-mbc,ez+mbc
+             do j=ey+1,ey+mbc
+                do i=sx-mbc,ex+mbc
+                   state(i,j,k,ieq)=state(i,ey,k,ieq)
+                enddo
+             enddo
+          enddo
+       enddo
+    end select
     
   end subroutine outerybound
 
   !==========================================================================
 
-  subroutine innerzbound (newold)
+  subroutine innerzbound (newold, boundarycondition)
 
     ! This routine resets the inner z boundary
 
     integer,intent(in) :: newold
+    integer,intent(in) :: boundarycondition
     
     integer :: i,j,k,ieq
 
     state => set_state_pointer(newold)
 
-    do ieq=1,neq
+    select case (boundarycondition)
+    case (REFLECTIVE)
        do k=sz-mbc,sz-1
           do j=sy-mbc,ey+mbc
              do i=sx-mbc,ex+mbc
-                state(i,j,k,ieq)=state(i,j,sz,ieq)
+                state(i,j,k,RHO)=state(i,j,2*sz-1-k,RHO)
+                state(i,j,k,RHVX)=state(i,j,2*sz-1-k,RHVX)
+                state(i,j,k,RHVY)=state(i,j,2*sz-1-k,RHVY)
+                state(i,j,k,RHVZ)=-state(i,j,2*sz-1-k,RHVZ)
+                state(i,j,k,EN:neq)=state(i,j,2*sz-1-k,EN:neq)
              enddo
           enddo
        enddo
-    enddo
+    case(OUTFLOW)
+       do ieq=1,neq
+          do k=sz-mbc,sz-1
+             do j=sy-mbc,ey+mbc
+                do i=sx-mbc,ex+mbc
+                   state(i,j,k,ieq)=state(i,j,sz,ieq)
+                enddo
+             enddo
+          enddo
+       enddo
+    end select
 
   end subroutine innerzbound
 
   !==========================================================================
 
-  subroutine outerzbound (newold)
+  subroutine outerzbound (newold, boundarycondition)
 
     ! This routine resets the outer y boundary
 
     integer,intent(in) :: newold
+    integer,intent(in) :: boundarycondition
 
     integer :: i,j,k,ieq
 
     state => set_state_pointer(newold)
 
-    do ieq=1,neq
+    select case (boundarycondition)
+    case (REFLECTIVE)
        do k=ez+1,ez+mbc
           do j=sy-mbc,ey+mbc
              do i=sx-mbc,ex+mbc
-                state(i,j,k,ieq)=state(i,j,ez,ieq)
+                state(i,j,k,RHO)=state(i,j,2*ez+1-k,RHO)
+                state(i,j,k,RHVX)=state(i,j,2*ez+1-k,RHVX)
+                state(i,j,k,RHVY)=state(i,j,2*ez+1-k,RHVY)
+                state(i,j,k,RHVZ)=-state(i,j,2*ez+1-k,RHVZ)
+                state(i,j,k,EN:neq)=state(i,j,2*ez+1-k,EN:neq)
              enddo
           enddo
        enddo
-    enddo
-    
+    case(OUTFLOW)
+       do ieq=1,neq
+          do k=ez+1,ez+mbc
+             do j=sy-mbc,ey+mbc
+                do i=sx-mbc,ex+mbc
+                   state(i,j,k,ieq)=state(i,j,ez,ieq)
+                enddo
+             enddo
+          enddo
+       enddo
+    end select
+
   end subroutine outerzbound
 
 
