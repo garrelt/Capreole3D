@@ -13,7 +13,7 @@ module hydro
   use mesh, only: sx,ex,sy,ey,sz,ez
 
   implicit none
-  private
+  private ! variables are private by default
 
   real(kind=dp),dimension(:,:,:,:),allocatable,target,public :: state1
   real(kind=dp),dimension(:,:,:,:),allocatable,target,public :: state2
@@ -60,6 +60,8 @@ contains
   !=====================================================================
 
   function set_state_pointer (whichone) result(state_pointer_result)
+
+    ! Sets state pointer to either old or new state
 
     integer,intent(in) :: whichone
     real(kind=dp),pointer,dimension(:,:,:,:) :: state_pointer_result
@@ -116,7 +118,7 @@ contains
     
     ! Header
     if (rank == 0) then
-       open(unit=40,file=filename,form='UNFORMATTED',status='old')
+       open(unit=40,file=filename,form="UNFORMATTED",status="old")
        read(40) banner
        read(40) nrOfDim_in
        read(40) neq_in
