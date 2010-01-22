@@ -62,15 +62,15 @@ contains
     call mpi_basic
 
     ! Open processor dependent log file
-    write(number,'(I4)') rank
-    filename=trim(adjustl('log.'//trim(adjustl(number))))
-    open(unit=log_unit,file=filename,status='unknown')
+    write(number,"(I4)") rank
+    filename=trim(adjustl("log."//trim(adjustl(number))))
+    open(unit=log_unit,file=filename,status="unknown")
 
-    write(log_unit,*) 'Log file for rank ',rank
+    write(log_unit,*) "Log file for rank ",rank
     ! Figure out hostname
     ! NOTE: compiler dependent!!!
     ierror=hostnm(hostname)
-    write(log_unit,*) 'The Processor is ',hostname
+    write(log_unit,*) "The Processor is ",trim(adjustl(hostname))
     call flush(log_unit)
 
     call mpi_topology
