@@ -19,7 +19,7 @@ module problem
   !  two regions, an inner cube, half the size of the domain, and the
   !  region outside of that.
 
-  use file_admin, only: stdinput, log_unit
+  use file_admin, only: stdinput, log_unit, file_input
   use precision, only: dp
   use cgsconstants, only: m_p
   use my_mpi
@@ -114,13 +114,13 @@ contains
 
     ! Ask for the input if you are processor 0.
     if (rank == 0) then
-       write (*,"(A,$)") "1) Inner density: "
+       if (.not.file_input) write (*,"(A,$)") "1) Inner density: "
        read (stdinput,*) density_inner
-       write (*,"(A,$)") "2) Inner pressure: "
+       if (.not.file_input) write (*,"(A,$)") "2) Inner pressure: "
        read (stdinput,*) pressure_inner
-       write (*,"(A,$)") "3) Outer density: "
+       if (.not.file_input) write (*,"(A,$)") "3) Outer density: "
        read (stdinput,*) density_outer
-       write (*,"(A,$)") "4) Outer pressure: "
+       if (.not.file_input) write (*,"(A,$)") "4) Outer pressure: "
        read (stdinput,*) pressure_outer
     endif
 
@@ -197,7 +197,6 @@ contains
 
     select case (boundary)
     case (X_IN)
-       write(*,*) "Doing x_in problem boundary conditions"
        do k=sz-1,ez+1
           do j=sy-1,ey+1
              do i=1-mbc,1

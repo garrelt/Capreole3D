@@ -16,27 +16,42 @@ module boundary
   use mesh, only: sx,ex,sy,ey,sz,ez
   use grid, only: vol,volx
   use geometry, only: presfunc
-  use hydro, only: state, NEW,OLD, set_state_pointer
-  !use atomic
+  use hydro, only: state, NEW, OLD, set_state_pointer
 
   implicit none
+  private
 
   ! Define outflow types
-  integer,parameter :: REFLECTIVE=-1
-  integer,parameter :: OUTFLOW=1
+  integer,parameter,public :: REFLECTIVE=-1
+  integer,parameter,public :: OUTFLOW=1
+  integer,parameter,public :: PROBLEM_DEF=2
+  integer,parameter,public :: X_IN=1
+  integer,parameter,public :: X_OUT=2
+  integer,parameter,public :: Y_IN=3
+  integer,parameter,public :: Y_OUT=4
+  integer,parameter,public :: Z_IN=5
+  integer,parameter,public :: Z_OUT=6
+
+  public :: exchngxy 
 
 contains
 
   !=======================================================================
 
-  subroutine exchngxy (newold,domainboundaryconditions)
+  subroutine exchngxy (newold,domainboundaryconditions,problem_boundary_routine)
     
     ! This routine exchanges boundary cells between neighbours
     ! extend of boundary: mbc
 
     integer,intent(in) :: newold
     integer,dimension(nrOfDim,2),intent(in) :: domainboundaryconditions
-
+    interface
+       subroutine problem_boundary_routine (boundary_id, state_id)
+         integer,intent(in) :: boundary_id
+         integer,intent(in) :: state_id
+       end subroutine problem_boundary_routine
+    end interface
+  
 #ifdef MPI
     real(kind=dp),dimension(mbc,1-mbc:ey-sy+1+mbc,1-mbc:ez-sz+1+mbc,neq) :: &
          xplane1
@@ -79,7 +94,7 @@ contains
 #endif
 
     integer :: ierror
-
+ 
     ! Point state to appropriate array
     state => set_state_pointer(newold)
 
@@ -87,17 +102,17 @@ contains
     ! the [inner,outer][x,y]bound routines need to be supplied
 
     if (nbrleft == MPI_PROC_NULL) &
-         call innerxbound(newold,domainboundaryconditions(1,1) )
+         call innerxbound(newold,domainboundaryconditions(1,1),problem_boundary_routine)
     if (nbrright == MPI_PROC_NULL) &
-         call outerxbound(newold,domainboundaryconditions(1,2) )
+         call outerxbound(newold,domainboundaryconditions(1,2),problem_boundary_routine)
     if (nbrdown == MPI_PROC_NULL) &
-         call innerybound(newold,domainboundaryconditions(2,1) )
+         call innerybound(newold,domainboundaryconditions(2,1),problem_boundary_routine)
     if (nbrup == MPI_PROC_NULL)   &
-         call outerybound(newold,domainboundaryconditions(2,2) )
+         call outerybound(newold,domainboundaryconditions(2,2),problem_boundary_routine)
     if (nbrbelow == MPI_PROC_NULL) &
-         call innerzbound(newold,domainboundaryconditions(3,1) )
+         call innerzbound(newold,domainboundaryconditions(3,1),problem_boundary_routine)
     if (nbrabove == MPI_PROC_NULL) &
-         call outerzbound(newold,domainboundaryconditions(3,2) )
+         call outerzbound(newold,domainboundaryconditions(3,2),problem_boundary_routine)
 
 #ifdef MPI
     ! Sizes in x and y direction
@@ -304,7 +319,7 @@ contains
 
   !==========================================================================
 
-  subroutine innerxbound (newold, boundarycondition)
+  subroutine innerxbound (newold, boundarycondition, problem_boundary)
     
     ! This routine resets the inner x boundary
     
@@ -313,6 +328,13 @@ contains
     integer,intent(in) :: newold
     integer,intent(in) :: boundarycondition
 
+    interface
+       subroutine problem_boundary (boundary_id, state_id)
+         integer,intent(in) :: boundary_id
+         integer,intent(in) :: state_id
+       end subroutine problem_boundary
+    end interface
+  
     state => set_state_pointer(newold)
 
     select case (boundarycondition)
@@ -336,13 +358,15 @@ contains
              enddo
           enddo
        enddo
+    case(PROBLEM_DEF)
+       call problem_boundary(X_IN,newold)
     end select
 
   end subroutine innerxbound
 
   !==========================================================================
 
-  subroutine outerxbound (newold, boundarycondition)
+  subroutine outerxbound (newold, boundarycondition, problem_boundary)
 
     ! This routine resets the outer x boundary
 
@@ -351,6 +375,13 @@ contains
     integer,intent(in) :: newold
     integer,intent(in) :: boundarycondition
 
+    interface
+       subroutine problem_boundary (boundary_id, state_id)
+         integer,intent(in) :: boundary_id
+         integer,intent(in) :: state_id
+       end subroutine problem_boundary
+    end interface
+  
     state => set_state_pointer(newold)
 
     select case (boundarycondition)
@@ -374,13 +405,15 @@ contains
              enddo
           enddo
        enddo
+    case(PROBLEM_DEF)
+       call problem_boundary(X_OUT,newold)
     end select
 
   end subroutine outerxbound
 
   !==========================================================================
 
-  subroutine innerybound (newold, boundarycondition)
+  subroutine innerybound (newold, boundarycondition, problem_boundary)
 
     ! This routine resets the inner y boundary
 
@@ -389,6 +422,13 @@ contains
     integer,intent(in) :: newold
     integer,intent(in) :: boundarycondition
 
+    interface
+       subroutine problem_boundary (boundary_id, state_id)
+         integer,intent(in) :: boundary_id
+         integer,intent(in) :: state_id
+       end subroutine problem_boundary
+    end interface
+  
     state => set_state_pointer(newold)
 
     select case (boundarycondition)
@@ -413,13 +453,15 @@ contains
              enddo
           enddo
        enddo
+    case(PROBLEM_DEF)
+       call problem_boundary(Y_IN,newold)
     end select
 
   end subroutine innerybound
 
   !==========================================================================
 
-  subroutine outerybound (newold, boundarycondition)
+  subroutine outerybound (newold, boundarycondition, problem_boundary)
 
     ! This routine resets the outer y boundary
 
@@ -428,6 +470,13 @@ contains
     integer,intent(in) :: newold
     integer,intent(in) :: boundarycondition
 
+    interface
+       subroutine problem_boundary (boundary_id, state_id)
+         integer,intent(in) :: boundary_id
+         integer,intent(in) :: state_id
+       end subroutine problem_boundary
+    end interface
+  
     state => set_state_pointer(newold)
 
     select case (boundarycondition)
@@ -452,19 +501,28 @@ contains
              enddo
           enddo
        enddo
+    case(PROBLEM_DEF)
+       call problem_boundary(Y_OUT,newold)
     end select
     
   end subroutine outerybound
 
   !==========================================================================
 
-  subroutine innerzbound (newold, boundarycondition)
+  subroutine innerzbound (newold, boundarycondition, problem_boundary)
 
     ! This routine resets the inner z boundary
 
     integer,intent(in) :: newold
     integer,intent(in) :: boundarycondition
     
+    interface
+       subroutine problem_boundary (boundary_id, state_id)
+         integer,intent(in) :: boundary_id
+         integer,intent(in) :: state_id
+       end subroutine problem_boundary
+    end interface
+  
     integer :: i,j,k,ieq
 
     state => set_state_pointer(newold)
@@ -492,19 +550,28 @@ contains
              enddo
           enddo
        enddo
+    case(PROBLEM_DEF)
+       call problem_boundary(Z_IN,newold)
     end select
 
   end subroutine innerzbound
 
   !==========================================================================
 
-  subroutine outerzbound (newold, boundarycondition)
+  subroutine outerzbound (newold, boundarycondition, problem_boundary)
 
     ! This routine resets the outer y boundary
 
     integer,intent(in) :: newold
     integer,intent(in) :: boundarycondition
 
+    interface
+       subroutine problem_boundary (boundary_id, state_id)
+         integer,intent(in) :: boundary_id
+         integer,intent(in) :: state_id
+       end subroutine problem_boundary
+    end interface
+  
     integer :: i,j,k,ieq
 
     state => set_state_pointer(newold)
@@ -532,6 +599,8 @@ contains
              enddo
           enddo
        enddo
+    case(PROBLEM_DEF)
+       call problem_boundary(Z_OUT,newold)
     end select
 
   end subroutine outerzbound
