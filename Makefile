@@ -51,6 +51,8 @@ TVDSOL = tvdsolver.o
 
 CART-CONSTANT = cart-constant.o
 
+CART-AMUSE = cart-amuse.o
+
 CART-ELLIPSECLUMP = cart-ellipseclump.o
 
 CART-DENSITYFIELD = cart-densityfield.o
@@ -136,6 +138,9 @@ RT-3D-PP-NA = sourceprops_pp.o rad_evolve_planeparallel_noav.o $(RT-3D_BASIC)
 .SUFFIXES: .f90 .F90 .mod .o
 
 # ISW-------------------------------------------------------------------
+
+cart-amuse : $(PRECISION) $(FILES) $(STRINGS) $(SIZES) $(NOSCALING) $(CONSTANTS) $(ABUNDANCES) $(ATOMIC) $(NOMPI) $(MESH) $(CART-COORDS) $(HYDRO) $(TIME) $(CART-ROUTINES) $(PROT) $(BOUNDARY) $(LOF) $(ROESOL) $(NO_IONIC) $(CART-AMUSE) $(INTEGRATE)  $(OUTPUT) $(EVOLVE) $(CAPREOLE) 
+	$(F90) $(OPTIONS) -o $@ $(FILES) $(STRINGS) $(NOMPI) $(MESH) $(CART-COORDS) $(HYDRO) $(TIME) $(CART-ROUTINES) $(PROT) $(BOUNDARY) $(LOF) $(ROESOL) $(NO_IONIC) $(CART-AMUSE) $(INTEGRATE) $(OUTPUT) $(EVOLVE) $(CAPREOLE) $(LIBS)
 
 cart-ellipseclump : $(PRECISION) $(FILES) $(STRINGS) $(SIZES) $(SCALING) $(CONSTANTS) $(ABUNDANCES) $(ATOMIC) $(NOMPI) $(MESH) $(CART-COORDS) $(HYDRO) $(TIME) $(CART-ROUTINES) $(PROT) $(BOUNDARY) $(LOF) $(ROESOL) $(NO_IONIC) $(CART-ELLIPSECLUMP) $(INTEGRATE)  $(OUTPUT) $(EVOLVE) $(CAPREOLE) 
 	$(F90) $(OPTIONS) -o $@ $(STRINGS) $(NOMPI) $(MESH) $(CART-COORDS) $(HYDRO) $(TIME) $(CART-ROUTINES) $(PROT) $(BOUNDARY) $(LOF) $(ROESOL) $(NO_IONIC) $(CART-ELLIPSECLUMP) $(INTEGRATE) $(OUTPUT) $(EVOLVE) $(CAPREOLE) $(LIBS)
