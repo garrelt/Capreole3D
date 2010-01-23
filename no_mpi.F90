@@ -92,7 +92,7 @@ contains
 #else
     ! Figure out hostname
     ! NOTE: compiler dependent!!!
-    !ierror=hostnm(hostname)
+    ierror=hostnm(hostname)
     if (ierror == 0) then
        write(unit=log_unit,fmt=*) "The Processor is ",hostname
     else 
