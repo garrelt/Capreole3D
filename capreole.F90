@@ -24,9 +24,10 @@ Program Capreole
   ! pointers are used.
   !----------------------------------------------------------------------------
 
+  use precision, only: dp
   use my_mpi ! too many variables inherited from the MPI library
   !            to use 'only' here.
-  use file_admin, only: stdinput, log_unit
+  use file_admin, only: stdinput, log_unit, file_input, flag_for_file_input
   use mesh, only: init_mesh
   use output, only: init_output
   use grid, only: init_coords
@@ -37,9 +38,20 @@ Program Capreole
 
   implicit none
 
-  ! Start and end time for CPU and wall clock report
-  real :: tstart,tend
-  integer :: cntr1,cntr2,countspersec
+  ! Start and end time for CPU report
+  real :: cputime1 !< Start time for CPU report
+  real :: cputime2 !< End time for CPU report
+  real(kind=dp) :: cpu_seconds=0.0
+  integer :: cpu_hours=0
+  integer :: cpu_minutes=0
+
+  ! Wall clock time variables
+  integer :: cntr1 !< Start time wall clock
+  integer :: cntr2 !< End time wall clock
+  integer :: countspersec !< counts per second (for wall clock time)
+  real(kind=dp) :: clock_seconds=0.0
+  integer :: clock_hours=0
+  integer :: clock_minutes=0
 
   ! Restart variables
   logical :: restart!=.false.
@@ -58,7 +70,7 @@ Program Capreole
   !----------------------------------------------------------------------------
 
   ! Initialize cpu timer
-  call cpu_time(tstart)
+  call cpu_time(cputime1)
 
   ! Initialize wall cock timer
   call system_clock(cntr1)
@@ -68,21 +80,28 @@ Program Capreole
 
   ! Set up input stream (either standard input or from file given
   ! by first argument)
-  if (iargc() > 0) then
-     call getarg(1,inputfile)
-     if (rank == 0) then
-        write(30,*) 'reading input from ',trim(adjustl(inputfile))
+  if (rank == 0) then
+     write(log_unit,*) "input or input?"
+     flush(log_unit)
+     if (COMMAND_ARGUMENT_COUNT () > 0) then
+        call GET_COMMAND_ARGUMENT(1,inputfile)
+        write(log_unit,*) "reading input from ",trim(adjustl(inputfile))
         open(unit=stdinput,file=inputfile)
+        call flag_for_file_input(.true.)
+     else
+        write(log_unit,*) "reading input from command line"
      endif
+     flush(log_unit)
   endif
 
   ! Ask if this is a restart
   if (rank == 0) then
-     write (*,'(A,$)') 'Restart of old run: (y/n): '
-     read (unit=stdinput,fmt='(A1)') answer
-     if (answer == 'y' .or. answer == 'Y') then
+     if (.not.file_input) write (*,"(A,$)") "Restart of old run: (y/n): "
+     read (unit=stdinput,fmt="(A1)") answer
+     if (answer == "y" .or. answer == "Y") then
         restart=.true.
-        write (*,'(A,$)') 'Output file from which to restart: '
+        if (.not.file_input) &
+             write (*,"(A,$)") "Output file from which to restart: "
         read (unit=stdinput,fmt=*) restartfile
      else
         restart=.false.
@@ -113,13 +132,28 @@ Program Capreole
   ! Evolve the problem
   call evolve()
 
-  ! Find out CPU and wall clock time
-  call cpu_time(tend)
-  call system_clock(cntr2,countspersec)
+  ! Find out CPU time
+  call cpu_time(cputime2)
+  cpu_seconds=cpu_seconds+real(cputime2-cputime1,dp)
+  cpu_minutes = cpu_minutes + int(cpu_seconds) / 60
+  cpu_seconds = MOD ( cpu_seconds , 60.0 )
+  cpu_hours = cpu_hours + cpu_minutes / 60
+  cpu_minutes = MOD ( cpu_minutes , 60 )
 
-  ! Report times
-  write(log_unit,*) 'CPU time: ',tend-tstart,' s'
-  write(log_unit,*) 'Wall clock time: ',(cntr2-cntr1)/countspersec,' s'
+  ! Find out wall clock time
+  call system_clock(cntr2,countspersec)
+  clock_seconds=clock_seconds+real(cntr2-cntr1,dp)/real(countspersec,dp)
+  clock_minutes = clock_minutes + int(clock_seconds) / 60
+  clock_seconds = MOD ( clock_seconds , 60.0 )
+  clock_hours = clock_hours + clock_minutes / 60
+  clock_minutes = MOD ( clock_minutes , 60 )
+  
+  if (rank == 0) then
+     write(log_unit,*) "CPU time: ",cpu_hours," hours",cpu_minutes," minutes", &
+          cpu_seconds," seconds."
+     write(log_unit,*) "Wall clock time: ",clock_hours," hours", &
+          clock_minutes," minutes",clock_seconds," seconds."
+  endif
 
   ! End the run
   call mpi_end()

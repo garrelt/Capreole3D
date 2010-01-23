@@ -19,7 +19,7 @@ module grid
   !              volx, voly, volz
   ! 2005-04-20 - adapted for 3D
   
-  use file_admin, only: stdinput, log_unit
+  use file_admin, only: stdinput, log_unit, file_input
   use precision, only: dp
   use scaling, only: SCLENG
   use sizes, only: nrOfDim,neq,mbc,CART
@@ -100,7 +100,7 @@ contains
        ! Ask for the input if you are processor 0.
        
        if (rank == 0) then
-          write (unit=*,fmt="(a)",advance="no") &
+          if (.not.file_input) write (unit=*,fmt="(a)",advance="no") &
                "2) Size of grid box (specify units): "
           read (unit=stdinput,fmt=*) xlength,ylength,zlength,str_length_unit
           write (unit=log_unit,fmt="(a,3(e10.3),a)") & 
@@ -109,20 +109,20 @@ contains
           ! Convert to cms
           call convert_case(str_length_unit,0) ! conversion to lower case
           select case (trim(adjustl(str_length_unit)))
-          case ('cm','centimeter','cms','centimeters')
+          case ("cm","centimeter","cms","centimeters")
              conversion_factor=1.0
-          case ('m','meter','ms','meters')
+          case ("m","meter","ms","meters")
              conversion_factor=100.0
-          case ('km','kilometer','kms','kilometers','clicks')
+          case ("km","kilometer","kms","kilometers","clicks")
              conversion_factor=1000.0
-          case ('pc','parsec','parsecs')
+          case ("pc","parsec","parsecs")
              conversion_factor=pc
-          case ('kpc','kiloparsec','kiloparsecs')
+          case ("kpc","kiloparsec","kiloparsecs")
              conversion_factor=kpc
-          case ('mpc','megaparsec','megaparsecs')
+          case ("mpc","megaparsec","megaparsecs")
              conversion_factor=Mpc
           case default
-             write(*,*) 'Length unit not recognized, assuming cm'
+             write(*,*) "Length unit not recognized, assuming cm"
              conversion_factor=1.0
           end select
           xlength=xlength*conversion_factor
@@ -229,7 +229,7 @@ contains
     
     ! Read in header
     if (rank.eq.0) then
-       open(unit=40,file=filename,form='UNFORMATTED',status='old')
+       open(unit=40,file=filename,form="UNFORMATTED",status="old")
        read(40) banner
        read(40) nrOfDim_in
        read(40) neq_in

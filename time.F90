@@ -8,7 +8,7 @@ module times
   ! This module contains the routine which allocates the hydro
   ! arrays. This way they do not end up on stack
   
-  use file_admin, only: stdinput
+  use file_admin, only: stdinput, log_unit, file_input
   use precision, only: dp
   use my_mpi
   use scaling, only: SCTIME
@@ -59,31 +59,33 @@ contains
 
     ! Ask for the input if you are processor 0.
     if (rank == 0) then
-       write (*,'(//,A,/)') '----- Output -----'
-       write (*,'(A,$)') '1) Time between outputs (specify unit): '
+       if (.not.file_input) then
+          write (*,"(//,A,/)") "----- Output -----"
+          write (*,"(A,$)") "1) Time between outputs (specify unit): "
+       endif
        read (stdinput,*) frametime,str_time_unit
-       write (*,'(A,$)') '2) How many output frames: '
+       if (.not.file_input) write (*,"(A,$)") "2) How many output frames: "
        read (stdinput,*) LastFrame
     endif
     
     ! report input parameters
     if (rank == 0) then
-       write (30,'(//,A,/)') '----- Output -----'
-       write (30,'(A,1PE10.3,A)') '1) Time between outputs: ', & 
+       write (log_unit,"(//,A,/)") "----- Output -----"
+       write (log_unit,"(A,1PE10.3,A)") "1) Time between outputs: ", & 
             frametime,str_time_unit
-       write (30,'(A,I4)') '2) Number of output frames: ',LastFrame
+       write (log_unit,"(A,I4)") "2) Number of output frames: ",LastFrame
        ! Convert to seconds
        call convert_case(str_time_unit,0) ! conversion to lower case
        select case (trim(adjustl(str_time_unit)))
-       case ('s','sec','second','secs','seconds')
-       case ('years','yrs','year','yr')
+       case ("s","sec","second","secs","seconds")
+       case ("years","yrs","year","yr")
           frametime=frametime*YEAR
-       case ('myears','myrs','myear','myr')
+       case ("myears","myrs","myear","myr")
           frametime=frametime*1e6*YEAR
-       case ('gyears','gyrs','gyear','gyr')
+       case ("gyears","gyrs","gyear","gyr")
           frametime=frametime*1e9*YEAR
        case default
-          write(*,*) 'Time unit not recognized, assuming seconds'
+          write(log_unit,*) "Time unit not recognized, assuming seconds"
        end select
     endif
     
@@ -124,7 +126,7 @@ contains
     
     ! Read in header
     if (rank == 0) then
-       open(unit=40,file=filename,form='UNFORMATTED',status='old')
+       open(unit=40,file=filename,form="UNFORMATTED",status="old")
 
        read(40) banner
        read(40) nrOfDim_in
@@ -138,10 +140,11 @@ contains
        close(40)
     endif
     
-    write(30,*) 'Sim time is', simtime/YEAR,' years'
+    write(log_unit,*) "Sim time is", simtime/YEAR," years"
     
     ! Scale time
     simtime=simtime/SCTIME
     
   end subroutine restart_time
+
 end module times

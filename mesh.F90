@@ -13,7 +13,7 @@ module mesh
 
   use precision, only: dp
   use my_mpi
-  use file_admin, only: stdinput,log_unit,ah3
+  use file_admin, only: stdinput,log_unit,ah3,file_input
 
   implicit none
 
@@ -53,8 +53,10 @@ contains
        if (.not.restart) then ! Fresh start
           
           ! Ask for input
-          print "(2/,A,/)", "----- Mesh -----"
-          write(unit=*,fmt="(a)",advance="no") "1) Number of mesh points: "
+          if (.not.file_input) then
+             print "(2/,A,/)", "----- Mesh -----"
+             write(unit=*,fmt="(a)",advance="no") "1) Number of mesh points: "
+          endif
           read (unit=stdinput,fmt=*) meshx,meshy,meshz
           
           ! Report back mesh

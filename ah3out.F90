@@ -17,7 +17,7 @@ module output
   ! - init_output: prepares the generics for the output
   ! - make_output: does the output of one snap shot
 
-  use file_admin, only: stdinput,ah3,log_unit
+  use file_admin, only: stdinput,ah3,log_unit,file_input
   use precision, only: dp
   use scaling, only: SCDENS,SCMOME,SCENER,SCTIME,SCLENG
   use sizes, only: nrOfDim,neq,neuler,RHO,RHVX,RHVY,RHVZ,EN
@@ -64,18 +64,18 @@ contains
           revdate(1:2)=date(7:8)
           revdate(3:4)=date(5:6)
           revdate(5:8)=date(1:4)
-          write(*,'(A,$)') 'Run ID (one letter): '
+          if (.not.file_input) write(*,"(A,$)") "Run ID (one letter): "
           read(stdinput,*) runid
           ! Inquire if it exists
           do
-             filename=revdate//'_'//runid//'_0000.ah3'
+             filename=revdate//"_"//runid//"_0000.ah3"
              inquire(file=filename,exist=test_exist)
              if (.not.test_exist) exit
-             if (runid < 'z') then
+             if (runid < "z") then
                 runid=achar(iachar(runid)+1)
-                write(log_unit,*) 'RunID already in use, trying ',runid
+                write(log_unit,*) "RunID already in use, trying ",runid
              else
-                write(log_unit,*) 'All runids are in use?'
+                write(log_unit,*) "All runids are in use?"
                 ierror=1
              endif
           enddo
@@ -102,7 +102,7 @@ contains
     integer,intent(in) :: nframe
     
     ! AH3D Output variables
-    character(len=80),parameter :: banner='Capreole (F90) 3D Hydrodynamics'
+    character(len=80),parameter :: banner="Capreole (F90) 3D Hydrodynamics"
     integer,parameter :: refinementFactor=1
     integer,parameter :: level=1
 
@@ -117,11 +117,11 @@ contains
 #endif
 
     ierror=0
-    write(log_unit,*) 'Writing Frame: ',nframe
+    write(log_unit,*) "Writing Frame: ",nframe
       
     ! Construct file name and open the file
-    write(string_frame,'(i4.4)') nframe
-    filename=revdate//'_'//runid//'_'//string_frame//'.ah3'
+    write(string_frame,"(i4.4)") nframe
+    filename=revdate//"_"//runid//"_"//string_frame//".ah3"
     
     ! AH3D output format (24-10-2002)
 
@@ -150,7 +150,7 @@ contains
     ! [double var(nrOfVars-(2+nrOfDim))]
 
     if (rank.eq.0) &
-         open(unit=ah3,file=filename,form='UNFORMATTED',status='NEW', &
+         open(unit=ah3,file=filename,form="UNFORMATTED",status="NEW", &
          IOSTAT=ierror)
 #ifdef MPI
     ! Distribute runid over nodes
@@ -170,8 +170,8 @@ contains
           close(ah3)
           
           ! First ring: Grid 
-          open(unit=ah3,file=filename,form='UNFORMATTED',status='OLD', &
-               position='APPEND')
+          open(unit=ah3,file=filename,form="UNFORMATTED",status="OLD", &
+               position="APPEND")
           write(ah3) ex-sx+1,ey-sy+1,ez-sz+1
           write(ah3) x(sx)*scleng,y(sy)*scleng,z(sz)*scleng
           write(ah3) dx*scleng,dy*scleng,dz*scleng
@@ -183,17 +183,17 @@ contains
           if (npr > 1) then
              call MPI_ISSEND(filename,19,MPI_CHARACTER,rank+1,outputcircle, &
                   MPI_COMM_NEW,request,mpi_ierror)
-             write(log_unit,*) rank,'sent filename to ',rank+1
+             write(log_unit,*) rank,"sent filename to ",rank+1
              ! Wait for the circle to complete
              call MPI_RECV(filename,19,MPI_CHARACTER,npr-1,outputcircle, &
                   MPI_COMM_NEW,status,mpi_ierror)
-             write(log_unit,*) rank,'received filename from ',npr-1
+             write(log_unit,*) rank,"received filename from ",npr-1
           endif
 #endif
           
           ! Second ring: Cell data
-          open(unit=ah3,file=filename,form='UNFORMATTED',status='OLD', &
-               position='APPEND')
+          open(unit=ah3,file=filename,form="UNFORMATTED",status="OLD", &
+               position="APPEND")
           write(ah3) (((state(i,j,k,RHO)*scdens,i=sx,ex),j=sy,ey),k=sz,ez)
           write(ah3) (((state(i,j,k,RHVX)*scmome,i=sx,ex),j=sy,ey),k=sz,ez)
           write(ah3) (((state(i,j,k,RHVY)*scmome,i=sx,ex),j=sy,ey),k=sz,ez)
@@ -209,11 +209,11 @@ contains
           if (npr > 1) then
              call MPI_ISSEND(filename,19,MPI_CHARACTER,rank+1,outputcircle, &
                   MPI_COMM_NEW,request,mpi_ierror)
-             write(log_unit,*) rank,'sent filename to ',rank+1
+             write(log_unit,*) rank,"sent filename to ",rank+1
              ! Wait for the circle to complete
              call MPI_RECV(filename,19,MPI_CHARACTER,npr-1,outputcircle, &
                   MPI_COMM_NEW,status,mpi_ierror)
-             write(log_unit,*) rank,'received filename from ',npr-1,' end of loop.'
+             write(log_unit,*) rank,"received filename from ",npr-1," end of loop."
           endif
 #endif
 #ifdef MPI
@@ -223,11 +223,11 @@ contains
           ! Receive filename from previous processor
           call MPI_RECV(filename,19,MPI_CHARACTER,rank-1,outputcircle, &
                MPI_COMM_NEW,status,mpi_ierror)
-          write(log_unit,*) rank,'received filename from ',rank-1
+          write(log_unit,*) rank,"received filename from ",rank-1
           
           if (mpi_ierror == 0) then ! if ok
-             open(unit=ah3,file=filename,form='UNFORMATTED',status='OLD', &
-                  position='APPEND')
+             open(unit=ah3,file=filename,form="UNFORMATTED",status="OLD", &
+                  position="APPEND")
              ! Grid 
              write(ah3) ex-sx+1,ey-sy+1,ez-sz+1
              write(ah3) x(sx)*scleng,y(sy)*scleng,z(sz)*scleng
@@ -240,18 +240,18 @@ contains
              ! Send filename along
              call MPI_ISSEND(filename,19,MPI_CHARACTER,nextproc, &
                   outputcircle,MPI_COMM_NEW,request,mpi_ierror)
-             write(log_unit,*) rank,'sent filename to ',nextproc
+             write(log_unit,*) rank,"sent filename to ",nextproc
           endif
           
           ! Second ring: Cells
           ! Receive filename from previous processor
           call MPI_RECV(filename,19,MPI_CHARACTER,rank-1,outputcircle, &
                MPI_COMM_NEW,status,mpi_ierror)
-          write(log_unit,*) rank,'received filename from ',rank-1
+          write(log_unit,*) rank,"received filename from ",rank-1
           
           if (mpi_ierror == 0) then ! if ok
-             open(unit=ah3,file=filename,form='UNFORMATTED',status='OLD', &
-                  position='APPEND')
+             open(unit=ah3,file=filename,form="UNFORMATTED",status="OLD", &
+                  position="APPEND")
              ! Cells
              write(ah3) (((state(i,j,k,RHO)*scdens,i=sx,ex),j=sy,ey),k=sz,ez)
              write(ah3) (((state(i,j,k,RHVX)*scmome,i=sx,ex),j=sy,ey),k=sz,ez)
@@ -269,15 +269,15 @@ contains
              ! Send filename along
              call MPI_ISSEND(filename,19,MPI_CHARACTER,nextproc, &
                   outputcircle,MPI_COMM_NEW,request,mpi_ierror)
-             write(log_unit,*) rank,'sent filename to ',nextproc
+             write(log_unit,*) rank,"sent filename to ",nextproc
           else
-             write(log_unit,*) 'MPI error in output routine'
+             write(log_unit,*) "MPI error in output routine"
              ierror=ierror+1
           endif
 #endif
        endif ranktest
     else
-       write(log_unit,*) 'Error opening output file, continuing without writing.'
+       write(log_unit,*) "Error opening output file, continuing without writing."
     endif errortest
     
   end subroutine make_output
