@@ -1,0 +1,10 @@
+no			! restart (y/n)
+50,50,50		! mesh size (x,y,z)
+a                       ! runid letter
+1,1,1 cm		! physical size of grid (plus unit)
+1.			! inner density
+1.			! inner pressure
+0.1			! outer density
+0.1			! outer pressure
+0.01 s                  ! time between outputs (plus unit)
+30                      ! number of outputs
