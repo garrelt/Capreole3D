@@ -46,8 +46,9 @@ module my_mpi
   integer,public ::  nbrdown,nbrup     ! up and down neighbours 
   integer,public ::  nbrabove,nbrbelow ! above and below neighbours 
 
-  public: mpi_setup,mpi_end
-  private: mpi_basic,mpi_topology,fnd3dnbrs,
+  public :: mpi_setup,mpi_end
+  private :: mpi_basic,mpi_topology,fnd3dnbrs
+
 contains
 
   !----------------------------------------------------------------------------
