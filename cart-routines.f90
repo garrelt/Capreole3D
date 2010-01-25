@@ -35,7 +35,7 @@ module geometry
   private
 
   real(kind=dp),public :: maxdt=5.0e11_dp/SCTIME ! non CFL limit on time step
-  real(kind=dp),private :: vmax_initial=10e5_dp/SCVELO ! non CFL limit on time step
+  real(kind=dp),private :: vmax_initial=10e-5_dp/SCVELO ! non CFL limit on time step
 
   public :: timestep,presfunc
 
@@ -49,7 +49,7 @@ contains
     real(kind=dp) :: absvel_result
     real(kind=dp),dimension(neq) :: st0d
 
-    if (st0d(RHO) == 0.0) write(*,*) 'ERROR'
+    if (st0d(RHO) == 0.0) write(*,*) "ERROR"
     absvel_result=(st0d(RHVX)*st0d(RHVX)+st0d(RHVY)*st0d(RHVY)+ &
          st0d(RHVZ)*st0d(RHVZ))/(st0d(RHO)*st0d(RHO))
 
@@ -77,17 +77,17 @@ contains
              pressr(i,j,k)=state(i,j,k,EN)-0.5*state(i,j,k,RHO)* &
                   absvel(state(i,j,k,:))
              if (abs(pressr(i,j,k)/state(i,j,k,EN)) < precision) then
-                write(30,'(A,2(1PE10.3,X),A,3(I4,X),A,E10.3)') &
-                     'PRECISION ISSUE: ',pressr(i,j,k), &
-                     state(i,j,k,EN),' at ',i,j,k,' time = ',time
+                write(30,"(A,2(1PE10.3,X),A,3(I4,X),A,E10.3)") &
+                     "PRECISION ISSUE: ",pressr(i,j,k), &
+                     state(i,j,k,EN)," at ",i,j,k," time = ",time
                 ierror=1
              endif
              pressr(i,j,k)=gamma1*pressr(i,j,k)
              if (pressr(i,j,k) <= 0.0_dp) then
-                !!write(30,'(A,2(1PE10.3,X),A,3(I4,X),A,E10.3)') &
-                !!     'Presfunc reports negative pressure: ', &
-                !!     pressr(i,j,k),state(i,j,k,EN),' at ',i,j,k, &
-                !!     ' time = ',time
+                !!write(30,"(A,2(1PE10.3,X),A,3(I4,X),A,E10.3)") &
+                !!     "Presfunc reports negative pressure: ", &
+                !!     pressr(i,j,k),state(i,j,k,EN)," at ",i,j,k, &
+                !!     " time = ",time
                 ierror=ierror+1
              endif
           enddo

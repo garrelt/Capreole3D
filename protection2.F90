@@ -75,12 +75,12 @@ contains
              if (pressr(i,j,k) <= 0.0.or.state(i,j,k,RHO) <= 0.0.or. &
                   state(i,j,k,EN) <= 0.0) then
                 ! Report to log file
-                write(30,'(A,1PE10.3,2(2X,E10.3))') &
-                     'Negative pressure/density/energy: ', &
+                write(30,"(A,1PE10.3,2(2X,E10.3))") &
+                     "Negative pressure/density/energy: ", &
                      pressr(i,j,k),state(i,j,k,RHO),state(i,j,k,EN)
-                write(30,'(A,3(I4,X),A,1PE10.3)') ' at ', &
-                     i,j,k,' time = ',time
-                write(30,*) 'call ',icall
+                write(30,"(A,3(I4,X),A,1PE10.3)") " at ", &
+                     i,j,k," time = ",time
+                write(30,*) "call ",icall
                 call flush(30)
                 ! Set a control variable
                 problem_counter=problem_counter+1
@@ -155,7 +155,7 @@ contains
                       problem_list(problem_counter)%dflux(2,3,:)=0.0
                    endif
                 else
-                   write(30,*) 'ERROR: Too many problems!'
+                   write(30,*) "ERROR: Too many problems!"
                 endif
              endif
           enddo
@@ -168,13 +168,13 @@ contains
        i=problem_list(nproblem)%position(1)
        j=problem_list(nproblem)%position(2)
        k=problem_list(nproblem)%position(3)
-       !write(30,'(A,5(1pe10.3))') 'Old: ',state(i,j,k,1:neuler)
-       !write(30,'(A,5(1pe10.3))') ' ',state(i-1,j,k,1:neuler)
-       !write(30,'(A,5(1pe10.3))') ' ',state(i+1,j,k,1:neuler)
-       !write(30,'(A,5(1pe10.3))') ' ',state(i,j-1,k,1:neuler)
-       !write(30,'(A,5(1pe10.3))') ' ',state(i,j+1,k,1:neuler)
-       !write(30,'(A,5(1pe10.3))') ' ',state(i,j,k-1,1:neuler)
-       !write(30,'(A,5(1pe10.3))') ' ',state(i,j,k+1,1:neuler)
+       !write(30,"(A,5(1pe10.3))") "Old: ",state(i,j,k,1:neuler)
+       !write(30,"(A,5(1pe10.3))") " ",state(i-1,j,k,1:neuler)
+       !write(30,"(A,5(1pe10.3))") " ",state(i+1,j,k,1:neuler)
+       !write(30,"(A,5(1pe10.3))") " ",state(i,j-1,k,1:neuler)
+       !write(30,"(A,5(1pe10.3))") " ",state(i,j+1,k,1:neuler)
+       !write(30,"(A,5(1pe10.3))") " ",state(i,j,k-1,1:neuler)
+       !write(30,"(A,5(1pe10.3))") " ",state(i,j,k+1,1:neuler)
        state(i,j,k,:)=state(i,j,k,:)+eta* &
             (problem_list(nproblem)%dflux(1,1,:)- &
             problem_list(nproblem)%dflux(2,1,:) + &
@@ -194,13 +194,13 @@ contains
             problem_list(nproblem)%dflux(1,3,:)
        if (k < meshz) state(i,j,k+1,:)=state(i,j,k+1,:)+eta* &
             problem_list(nproblem)%dflux(2,3,:)
-       !write(30,'(A,5(1pe10.3))') 'New: ',state(i,j,k,1:neuler)
-       !write(30,'(A,5(1pe10.3))') ' ',state(i-1,j,k,1:neuler)
-       !write(30,'(A,5(1pe10.3))') ' ',state(i+1,j,k,1:neuler)
-       !write(30,'(A,5(1pe10.3))') ' ',state(i,j-1,k,1:neuler)
-       !write(30,'(A,5(1pe10.3))') ' ',state(i,j+1,k,1:neuler)
-       !write(30,'(A,5(1pe10.3))') ' ',state(i,j,k-1,1:neuler)
-       !write(30,'(A,5(1pe10.3))') ' ',state(i,j,k+1,1:neuler)
+       !write(30,"(A,5(1pe10.3))") "New: ",state(i,j,k,1:neuler)
+       !write(30,"(A,5(1pe10.3))") " ",state(i-1,j,k,1:neuler)
+       !write(30,"(A,5(1pe10.3))") " ",state(i+1,j,k,1:neuler)
+       !write(30,"(A,5(1pe10.3))") " ",state(i,j-1,k,1:neuler)
+       !write(30,"(A,5(1pe10.3))") " ",state(i,j+1,k,1:neuler)
+       !write(30,"(A,5(1pe10.3))") " ",state(i,j,k-1,1:neuler)
+       !write(30,"(A,5(1pe10.3))") " ",state(i,j,k+1,1:neuler)
     enddo
 
     if (problem_counter > 0) then
@@ -213,8 +213,8 @@ contains
              do i=sx,ex
                 ! Check if the pressure is still negative
                 if (pressr(i,j,k) <= 0.0) then ! check result of fix 1
-                   write(30,*) 'Still Negative pressure: ', &
-                        pressr(i,j,k),' at ',i,j,k
+                   write(30,*) "Still Negative pressure: ", &
+                        pressr(i,j,k)," at ",i,j,k
                    call flush(30)
                    
                    ! Pressure fix 2: set temperature to minimum value
@@ -230,13 +230,13 @@ contains
                 ! These are fatal. inegative is used to communicate
                 ! this to the calling program.
                 if (state(i,j,k,RHO) <= 0.0) then
-                   write(30,*) 'Still negative density: ', &
-                        state(i,j,k,RHO),' at ',i,j,k
+                   write(30,*) "Still negative density: ", &
+                        state(i,j,k,RHO)," at ",i,j,k
                    inegative=1
                 endif
                 if (state(i,j,k,EN) <= 0.0) then
-                   write(30,*) 'Still negative energy: ', &
-                        state(i,j,k,EN),' at ',i,j,k
+                   write(30,*) "Still negative energy: ", &
+                        state(i,j,k,EN)," at ",i,j,k
                    inegative=2
                 endif
              enddo

@@ -213,7 +213,7 @@ contains
           
           ! Report problems
           if (ierror /= 0) then
-             write(30,*) 'Roe solver error (x), j,k= ',j,k
+             write(30,*) "Roe solver error (x), j,k= ",j,k
              call flush(30)
              itoterror=itoterror+ierror
           endif
@@ -272,7 +272,7 @@ contains
 
           ! Report problems
           if (ierror /= 0) then
-             write(30,*) 'Roe solver error (y), i,k= ',i,k
+             write(30,*) "Roe solver error (y), i,k= ",i,k
              call flush(30)
              itoterror=itoterror+ierror
           endif
@@ -331,7 +331,7 @@ contains
 
           ! Report problems
           if (ierror /= 0) then
-             write(30,*) 'Roe solver error (z), i,j= ',i,j
+             write(30,*) "Roe solver error (z), i,j= ",i,j
              call flush(30)
              itoterror=itoterror+ierror
           endif
