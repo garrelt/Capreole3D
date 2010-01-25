@@ -25,6 +25,7 @@ Program Capreole
   !----------------------------------------------------------------------------
 
   use precision, only: dp
+  use clocks, only: setup_clocks, report_clocks
   use my_mpi ! too many variables inherited from the MPI library
   !            to use 'only' here.
   use file_admin, only: stdinput, log_unit, file_input, flag_for_file_input
@@ -69,11 +70,8 @@ Program Capreole
 
   !----------------------------------------------------------------------------
 
-  ! Initialize cpu timer
-  call cpu_time(cputime1)
-
-  ! Initialize wall cock timer
-  call system_clock(cntr1)
+  ! Initialize clocks (cpu and wall)
+  call setup_clocks ()
 
   ! Set up MPI structure
   call mpi_setup()
@@ -132,28 +130,8 @@ Program Capreole
   ! Evolve the problem
   call evolve()
 
-  ! Find out CPU time
-  call cpu_time(cputime2)
-  cpu_seconds=cpu_seconds+real(cputime2-cputime1,dp)
-  cpu_minutes = cpu_minutes + int(cpu_seconds) / 60
-  cpu_seconds = MOD ( cpu_seconds , 60.0 )
-  cpu_hours = cpu_hours + cpu_minutes / 60
-  cpu_minutes = MOD ( cpu_minutes , 60 )
-
-  ! Find out wall clock time
-  call system_clock(cntr2,countspersec)
-  clock_seconds=clock_seconds+real(cntr2-cntr1,dp)/real(countspersec,dp)
-  clock_minutes = clock_minutes + int(clock_seconds) / 60
-  clock_seconds = MOD ( clock_seconds , 60.0 )
-  clock_hours = clock_hours + clock_minutes / 60
-  clock_minutes = MOD ( clock_minutes , 60 )
-  
-  if (rank == 0) then
-     write(log_unit,*) "CPU time: ",cpu_hours," hours",cpu_minutes," minutes", &
-          cpu_seconds," seconds."
-     write(log_unit,*) "Wall clock time: ",clock_hours," hours", &
-          clock_minutes," minutes",clock_seconds," seconds."
-  endif
+  ! Report clocks (cpu and wall)
+  call report_clocks ()
 
   ! End the run
   call mpi_end()

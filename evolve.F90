@@ -16,6 +16,7 @@ module evolution
 
   use precision, only: dp
   use my_mpi
+  use clocks, only: update_clocks
   use file_admin, only: log_unit
   use scaling, only: sctime
   use hydro, only: stold,stnew,state1,state2,state,NEW,OLD
@@ -103,7 +104,7 @@ contains
        time=time+dt ! update time
 
        ! Report time step info
-       write(log_unit,'(A,I6,3(X,1PE10.3))') 'Time info: ',&
+       write(log_unit,"(A,I6,3(X,1PE10.3))") "Time info: ",&
             nstep,time*sctime,dt*sctime,nexttime*sctime
        call flush(log_unit)
 
@@ -116,15 +117,19 @@ contains
        endif
 
        if (nframe > LastFrame .or. istop /= 0) exit ! end the integration loop
+
+       ! Update clocks (not to loose precision in clock counters)
+       call update_clocks ()
+
     enddo
 
     if (istop.ne.0) then
        ! Record conditions where error occured
-       write(log_unit,*) 'Stop triggered by correction routine'
+       write(log_unit,*) "Stop triggered by correction routine"
        state => stold
        call make_output(nframe)
     else
-       write(log_unit,*) 'Maximum number of frames reached; nframe = ',nframe
+       write(log_unit,*) "Maximum number of frames reached; nframe = ",nframe
     endif
 
   end subroutine evolve
