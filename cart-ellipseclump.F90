@@ -1,8 +1,8 @@
 module problem
 
-  ! Module for Capreole 3D (F90)
+  ! Module for Capreole3D (F90)
   ! Author: Garrelt Mellema
-  ! Date: 2004-05-11
+  ! Date: 2010-01-25
 
   ! This is the problem module. It contains the routines which define the
   ! problem being solved:
@@ -17,11 +17,11 @@ module problem
   ! Can be used for Test 7 of the Cosmological Radiative Transfer Comparison
   ! Project
 
-  use file_admin, only: stdinput
+  use file_admin, only: stdinput, log_unit, file_input
   use precision, only: dp
   use string_manipulation, only: convert_case
   use my_mpi
-  use sizes, only: mbc,neq,RHO,RHVX,RHVY,RHVZ,EN
+  use sizes, only: mbc,neq,RHO,RHVX,RHVY,RHVZ,EN,nrofDim
   use scaling, only: SCDENS, SCVELO, SCLENG, SCENER, SCMOME
   use cgsconstants, only: m_p, kb
   use astroconstants, only: pc, kpc, Mpc
@@ -30,10 +30,13 @@ module problem
   use mesh, only: sx,ex,sy,ey,sz,ez,meshx,meshy,meshz
   use grid, only: x,y,z,dx,dy,dz
   use hydro, only: state,pressr,set_state_pointer,NEW,OLD,stnew,tmpstate,restart_state
-  use boundary, only: exchngxy
+  use boundary, only: exchngxy,REFLECTIVE,OUTFLOW,PROBLEM_DEF,X_IN,X_OUT,Y_IN, &
+       Y_OUT,Z_IN,Z_OUT
   use ionic, only: init_ionic
 
   implicit none
+
+  integer, dimension(nrofDim,2) :: domainboundaryconditions
 
   real(kind=dp),private :: sedensity,sevelocity,sepressr
 
@@ -45,26 +48,38 @@ contains
     
     ! This may be a fresh start or a restart of a saved run
     
-    logical,intent(in) :: restart ! tells you whether it's a new run or a restart
-    character(len=19),intent(in) :: restartfile
+    !> tells you whether it's a new run or a restart
+    logical,intent(in) :: restart 
+    character(len=19),intent(in) :: restartfile !< file from which to restart
 
     ! Local variables
-    real(kind=dp) :: r_interface ! dummy needed for calling init_ionic
-    integer :: ierror
+    real(kind=dp) :: r_interface !< dummy needed for calling init_ionic
+    integer :: ierror !< error flag
 
-    if (.not.restart) then ! Fresh start
+    ! Set domain boundary conditions
+    domainboundaryconditions(2:3,:)=OUTFLOW
+    domainboundaryconditions(1,2)=OUTFLOW
+    domainboundaryconditions(1,1)=PROBLEM_DEF
 
+    ! Fill the state variable
+    if (.not.restart) then 
+
+       ! Fresh start
        call fresh_start_state( )
        
     else
 
+       ! Read state from restartfile
        call restart_state(restartfile,ierror)
+
+       ! Scale to code scaling
        state(:,:,:,RHO)=state(:,:,:,RHO)/scdens
        state(:,:,:,RHVX)=state(:,:,:,RHVX)/scmome
        state(:,:,:,RHVY)=state(:,:,:,RHVY)/scmome
        state(:,:,:,RHVZ)=state(:,:,:,RHVZ)/scmome
        state(:,:,:,EN)=state(:,:,:,EN)/scener
-       call exchngxy(OLD)
+
+       call exchngxy(OLD,domainboundaryconditions,problemboundary) ! Fill boundary conditions
 
     endif
        
@@ -105,52 +120,56 @@ contains
 
     ! Ask for the input if you are processor 0.
     if (rank == 0) then
-       write (*,'(//,A,/)') '----- Environment -----'
-       write (*,'(A,$)') '1) Density (cm^-3): '
+       if (.not.file_input) then
+          write (*,'(//,A,/)') '----- Environment -----'
+          write (*,'(A,$)') '1) Density (cm^-3): '
+       endif
        read (stdinput,*) edensity
-       write (*,'(A,$)') '2) Temperature: '
+       if (.not.file_input) write (*,'(A,$)') '2) Temperature: '
        read (stdinput,*) etemperature
-       write (*,'(A,$)') '3) Blast velocity (km/s): '
+       if (.not.file_input) write (*,'(A,$)') '3) Blast velocity (km/s): '
        read (stdinput,*) vblast
        
-       write (*,'(//,A,/)') '----- Knot -----'
-       write (*,'(A,$)') '1) Density (cm^-3): '
+       if (.not.file_input) then
+          write (*,'(//,A,/)') '----- Knot -----'
+          write (*,'(A,$)') '1) Density (cm^-3): '
+       endif
        read (stdinput,*) wdensity
-       write (*,'(A,$)') '2) Temperature: '
+       if (.not.file_input) write (*,'(A,$)') '2) Temperature: '
        read (stdinput,*) wtemperature
-       write (*,'(A,$)') '3) Position of centre x,y,z (specify units): '
+       if (.not.file_input) write (*,'(A,$)') '3) Position of centre x,y,z (specify units): '
        read (stdinput,*) x0,y0,z0,str_length_unit
-       write (*,'(A,$)') '4) Axis 1: '
+       if (.not.file_input) write (*,'(A,$)') '4) Axis 1: '
        read (stdinput,*) axis1,str_a1_unit
-       write (*,'(A,$)') '5) Axis 2: '
+       if (.not.file_input) write (*,'(A,$)') '5) Axis 2: '
        read (stdinput,*) axis2,str_a2_unit
-       write (*,'(A,$)') '6) Axis 3: '
+       if (.not.file_input) write (*,'(A,$)') '6) Axis 3: '
        read (stdinput,*) axis3,str_a3_unit
-       write (*,'(A,$)') '7) Rotation angle1: '
+       if (.not.file_input) write (*,'(A,$)') '7) Rotation angle1: '
        read (stdinput,*) rotangle1
-       write (*,'(A,$)') '8) Rotation angle2: '
+       if (.not.file_input) write (*,'(A,$)') '8) Rotation angle2: '
        read (stdinput,*) rotangle2
     endif
 
     ! report input parameters
     if (rank == 0) then
-       write(30,'(A)') & 
+       write(log_unit,'(A)') & 
             'Problem: cart-ellipseclump (cartesian shock - elliptical cloud interaction)'
-       write (30,'(//,A,/)') '----- Environment -----'
-       write (30,'(A,1PE10.3)') '1) Density (cm^-3): ',edensity
-       write (30,'(A,1PE10.3)') '2) Temperature: ',etemperature
-       write (30,'(A,F8.3)') '3) Blast velocity (km/s): ',vblast
+       write (log_unit,'(//,A,/)') '----- Environment -----'
+       write (log_unit,'(A,1PE10.3)') '1) Density (cm^-3): ',edensity
+       write (log_unit,'(A,1PE10.3)') '2) Temperature: ',etemperature
+       write (log_unit,'(A,F8.3)') '3) Blast velocity (km/s): ',vblast
        
-       write (30,'(//,A,/)') '----- Knot -----'
-       write (30,'(A,1PE10.3)') '1) Density (cm^-3): ',wdensity
-       write (30,'(A,1PE10.3)') '2) Temperature: ',wtemperature
-       write (30,'(A,3(1PE10.3,X),A)') '3) Position of centre x,y,z: ',&
+       write (log_unit,'(//,A,/)') '----- Knot -----'
+       write (log_unit,'(A,1PE10.3)') '1) Density (cm^-3): ',wdensity
+       write (log_unit,'(A,1PE10.3)') '2) Temperature: ',wtemperature
+       write (log_unit,'(A,3(1PE10.3,X),A)') '3) Position of centre x,y,z: ',&
             x0,y0,z0,str_length_unit
-       write (30,'(A,1PE10.3,A)') '4) Axis 1: ',axis1,str_a1_unit
-       write (30,'(A,1PE10.3,A)') '5) Axis 2: ',axis2,str_a2_unit
-       write (30,'(A,1PE10.3,A)') '6) Axis 3: ',axis3,str_a3_unit
-       write (30,'(A,F8.3)') '7) Rotation angle1: ',rotangle1
-       write (30,'(A,F8.3)') '8) Rotation angle2: ',rotangle2
+       write (log_unit,'(A,1PE10.3,A)') '4) Axis 1: ',axis1,str_a1_unit
+       write (log_unit,'(A,1PE10.3,A)') '5) Axis 2: ',axis2,str_a2_unit
+       write (log_unit,'(A,1PE10.3,A)') '6) Axis 3: ',axis3,str_a3_unit
+       write (log_unit,'(A,F8.3)') '7) Rotation angle1: ',rotangle1
+       write (log_unit,'(A,F8.3)') '8) Rotation angle2: ',rotangle2
        
        ! Convert to cm
        x0=x0*unit_conversion(str_length_unit)
@@ -207,9 +226,9 @@ contains
     vs1=sqrt(gamma*epressr/edensity) ! Sound speed in unshocked gas
     xm1=vblast/vs1                   ! Mach numnber of shock
     
-    write(30,*) 'Pressure= ',epressr*scener
-    write(30,*) 'Density= ',edensity*scdens
-    write(30,*) 'Mach number= ',xm1
+    write(log_unit,*) 'Pressure= ',epressr*scener
+    write(log_unit,*) 'Density= ',edensity*scdens
+    write(log_unit,*) 'Mach number= ',xm1
     
     ! Hugoniot conditions for density and pressure jumps
     
@@ -362,7 +381,7 @@ contains
           ! In order for the grid boundaries to be consistent, we need
           ! to reset them after each smoothing loop.
           ! exchange boundaries with neighbours
-          call exchngxy(OLD)
+       call exchngxy(OLD,domainboundaryconditions,problemboundary) ! Fill boundary conditions
        enddo
     endif
     
@@ -395,6 +414,49 @@ contains
 
   !==========================================================================
 
+  subroutine problemboundary (boundary,newold)
+    
+    ! This routine resets the inner boundary to the inflow condition
+    
+    integer,intent(in) :: boundary
+    integer,intent(in) :: newold
+
+    integer :: i,j,k
+
+    ! Point state to appropriate array
+    state => set_state_pointer(newold)
+
+    select case (boundary)
+    case (X_IN)
+       if (sx == 1 .and. sevelocity > 0.0) then
+          do k=sz-1,ez+1
+             do j=sy-1,ey+1
+                do i=1-mbc,1
+                   state(i,j,k,RHO)=sedensity
+                   state(i,j,k,RHVX)=sedensity*sevelocity
+                   state(i,j,k,RHVY)=0.0d0
+                   state(i,j,k,RHVZ)=0.0d0
+                   pressr(i,j,k)=sepressr
+                   state(i,j,k,EN)=pressr(i,j,k)/gamma1+ &
+                        0.5d0*(state(i,j,k,RHVX)*state(i,j,k,RHVX)+ &
+                        state(i,j,k,RHVY)*state(i,j,k,RHVY)+ &
+                        state(i,j,k,RHVZ)*state(i,j,k,RHVZ))/state(i,j,k,RHO)
+                   !state(i,j,k,TRACER1)=-1.0d0
+                enddo
+             enddo
+          enddo
+       endif
+    case (X_OUT)
+    case (Y_IN)
+    case (Y_OUT)
+    case (Z_IN)
+    case (Z_OUT)
+    end select
+    
+  end subroutine problemboundary
+
+  !==========================================================================
+
   subroutine apply_grav_force(dt,newold)
 
     ! Dummy routine
@@ -405,38 +467,6 @@ contains
   end subroutine apply_grav_force
     
   !==========================================================================
-
-  subroutine inflow (newold)
-    
-    ! This routine resets the inner boundary to the inflow condition
-    
-    integer,intent(in) :: newold
-
-    integer :: i,j,k
-
-    ! Point state to appropriate array
-    state => set_state_pointer(newold)
-
-    if (sx == 1 .and. sevelocity > 0.0) then
-       do k=sz-1,ez+1
-          do j=sy-1,ey+1
-             do i=1-mbc,1
-                state(i,j,k,RHO)=sedensity
-                state(i,j,k,RHVX)=sedensity*sevelocity
-                state(i,j,k,RHVY)=0.0d0
-                state(i,j,k,RHVZ)=0.0d0
-                pressr(i,j,k)=sepressr
-                   state(i,j,k,EN)=pressr(i,j,k)/gamma1+ &
-                        0.5d0*(state(i,j,k,RHVX)*state(i,j,k,RHVX)+ &
-                        state(i,j,k,RHVY)*state(i,j,k,RHVY)+ &
-                        state(i,j,k,RHVZ)*state(i,j,k,RHVZ))/state(i,j,k,RHO)
-                !state(i,j,k,TRACER1)=-1.0d0
-             enddo
-          enddo
-       enddo
-    endif
-    
-  end subroutine inflow
 
   function unit_conversion(in_str_unit)
     
@@ -463,13 +493,15 @@ contains
     case ('mpc','megaparsec','megaparsecs')
        conversion_factor=Mpc
     case default
-       write(*,*) 'Length unit not recognized, assuming cm'
+       write(log_unit,*) 'Length unit not recognized, assuming cm'
        conversion_factor=1.0
     end select
     
     unit_conversion=conversion_factor
     
   end function unit_conversion
+
+  !==========================================================================
 
   function ellipse (x,y,z,x0,y0,z0,angle1,angle2,axis1,axis2,axis3)
     

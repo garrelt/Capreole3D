@@ -1,57 +1,158 @@
-# Makefile for MPI hydro
-#F90 = pf90
-#F90 = f95
-#F90 = mpif77
-F90 = ifort
-#F90 = mpif90
+# Makefile for Capreole.
+#
+# Author: Garrelt Mellema
 
-LDR     = $(F90)
-#PP = cpp -P
+# This Makefile can make different versions of Capreole.
+# These versions differ in their parallelization and/or
+# different initial conditions (called "problems").
+#
+# Note 1: Parallelization
+# The parallelization intended is specified in the name
+# of the executable: _omp means OpenMP (shared memory), 
+# _mpi means MPI (distributed memory). Both can also be
+# used at the same time (if your architecture supports
+# it.
+#
+# Note 2: Initial conditions
+# Different initial conditions are specified by modules
+# called "geometry"-"problem name", where geometry for
+# 3D Capreole is almost always "cart" for cartesian.
+# So, cart-densityfield is a problem module (initial
+# conditions) for a triaxial cloud, possibly hit by
+# a shock wave.
+#
+# Note 3: Compiler & Flags
+# The compiler is specified by the FC variable (MPIFC for the MPI
+# compiler). We have only extensively used the Intel F90 compiler. 
+# Support for other compilers will have to be added.
+# Parts of the code need to know about the compiler, this is
+# done through preprocessor statements. So when compiling with
+# intel compiler, -DIFORT needs to be specified. Support for
+# new compilers thus needs to be added in the code too.
+#
+# Note 4: Recompiling
+# Some dependencies are through module parameters, and thus
+# not recognized by make. Best practise is to run "make clean"
+# before running "make".
+#-------------------------------------------------------
 
-# F90 options
-#IFORTFLAGS = -xW -O3 -vec_report -u -ipo -fpe0 -DIFORT
-IFORTFLAGS = -xW -O3 -vec_report -u -ipo -DIFORT
-#IFORTFLAGS = -xW -O3 -u -ipo -fpe0
-#IFORTFLAGS = -assume 2underscores -xW -O3 -vec_report -u -ipo -fpe0
-F90FLAGS = $(IFORTFLAGS)
-#F90FLAGS = -openmp -DOPENMP $(IFORTFLAGS)
-#F90FLAGS = $(IFORTFLAGS) -DMPI 
+# Compiler: gfortran
+#FC = gfortran # GNU compiler
+#MPIFC = mpif90 # MPI compiler
 
+# F90 options (gfortran)
+#GFORTFLAGS = -O3 -DGFORT -DMPILOG
+# Processor dependent optimization
+#F90FLAGS1 = $(GFORTFLAGS) 
+
+# These flags should be added to the F90FLAGS1 depending on the executable
+# made. Specify this below on a per executable basis.
+#MPI_FLAGS = -I/usr/include/lam -DMPI # For LAM mpi (Stockholm)
+#MPI_FLAGS = -DMPI # 
+#MPI_FLAGS = -DMPI -DMPILOG # Add more (MPI node) diagnostic output
+#OPENMP_FLAGS = -openmp # For gfortran compiler
+
+#-------------------------------------------------------
+# Compiler: ifort (Intel) best tested
+FC = ifort # Intel compiler
+MPIFC = mpif90 # MPI compiler
+
+# F90 options (ifort)
+#IFORTFLAGS = -O0 -g -DIFORT
+IFORTFLAGS = -O3 -vec_report -u -fpe0 -ipo -DIFORT -shared-intel #-check all -traceback
+#IFORTFLAGS = -O3 -vec_report -u -fpe0 -ipo -mcmodel=medium -shared-intel -DIFORT #-check all -traceback
+# Processor dependent optimization
+#F90FLAGS1 = $(IFORTFLAGS) 
+F90FLAGS1 = -xW $(IFORTFLAGS) 
+#F90FLAGS1 = -xO $(IFORTFLAGS) 
+#F90FLAGS1 = -xT $(IFORTFLAGS) # Laptop 
+#F90FLAGS1 = -xB $(IFORTFLAGS)
+
+# These flags should be added to the F90FLAGS1 depending on the executable
+# made. Specify this below on a per executable basis.
+#MPI_FLAGS = -I/usr/include/lam -DMPI # For LAM mpi (Stockholm)
+MPI_FLAGS = -DMPI # 
+#MPI_FLAGS = -DMPI -DMPILOG # Add more (MPI node) diagnostic output
+OPENMP_FLAGS = -openmp # For Intel compiler
+
+#-------------------------------------------------------
+
+# Compiler: Sun
+#(possible problems with constant definition. Cannot have sqrt in constant
+# definition)
+#FC = f95 # Sun compiler
+#MPIFC = mpif90 # MPI compiler
+
+# F90 options (ifort)
+#SUNFLAGS = -O3 -DSUN
+# Processor dependent optimization
+#F90FLAGS1 = $(SUNFLAGS) 
+#F90FLAGS1 = -xW $(SUNFLAGS) 
+
+# These flags should be added to the F90FLAGS1 depending on the executable
+# made. Specify this below on a per executable basis.
+#MPI_FLAGS = -I/usr/include/lam -DMPI # For LAM mpi (Stockholm)
+#MPI_FLAGS = -DMPI # 
+#MPI_FLAGS = $(MPI_FLAGS) -DMPILOG # Add more (MPI node) diagnostic output
+#OPENMP_FLAGS = -openmp # For Sun compiler
+
+#-------------------------------------------------------
+
+# PGI compiler (not recently used/tested)
+#FC = pf90
+#MPIFC = mpif77
+#MPIFC = mpif90
+
+# F90 options (pgi)
+#PGIFLAGS = -O3 -fast -DPGI
+#F90FLAGS1 = -tp barcelona-64  $(PGIFLAGS) # ranger processors
+
+# These flags should be added to the F90FLAGS1 depending on the executable
+# made. Specify this below on a per executable basis.
+#MPI_FLAGS = -DMPI 
+#MPI_FLAGS = $(MPI_FLAGS) -DMPILOG # Add more (MPI node) diagnostic output
+#OPENMP_FLAGS = -mp 
+
+#-------------------------------------------------------
+
+# Absoft compilers (not recently used/tested)
+#FC = f90
 #ABSOFTF90FLAGS = -O3 -cpu:opteron #-DMPI
 #ABSOFTF90FLAGS = -keep -Wv,-Pprocs,1 -O3 -cpu:opteron #-DMPI
+LIBS = #-lU77
+
+#-------------------------------------------------------
+
+#LDR     = $(F90)
 
 OPTIONS = $(F90FLAGS)
 
-LDFLAGS = $(OPTIONS) 
-LIBS = #-lU77
+LDFLAGS = $(OPTIONS) #-L/afs/astro.su.se/pkg/intel/Compiler/11.1/056/lib/intel64/
+LIBS = -lirc
+
+#-------------------------------------------------------
 
 # list of objects we're using
 
-PRECISION = precision.o
+CONSTANTS = mathconstants.o cgsconstants.o cgsphotoconstants.o cgsastroconstants.o
 
-FILES = file_admin.o
-
-MESH = mesh.o
-
-CART-COORDS = cart-coords.o
-
-CART-ROUTINES = cart-routines.o
+COSMOPARMS = cosmoparms.o
 
 PROT = protection2.o
 
 LOF = lof-2.2.o
 
-BOUNDARY = boundary.o
-
 ROESOL = roesol-adv.o
 
+INTEGRATE_TVD = integrate_tvd.o
+
 TVDSOL = tvdsolver.o
+
+INTEGRATE_VLFVS = integrate_vlfvs.o
 
 # CART problems
 
 CART-CONSTANT = cart-constant.o
-
-CART-AMUSE = cart-amuse.o
 
 CART-ELLIPSECLUMP = cart-ellipseclump.o
 
@@ -62,54 +163,6 @@ CART-ENRIQUE = cart-enrique2.o
 CART-HALO = cart-halo.o
 
 CART-MINIHALO = cart-minihalo.o
-
-HYDRO = hydro.o
-
-TIME = time.o
-
-INTEGRATE = integrate-strang.o
-
-INTEGRATE_TVD = integrate_tvd.o
-
-INTEGRATE_VLFVS = integrate_vlfvs.o
-
-EVOLVE = evolve.o
-
-INPUT = ah3in.o
-
-OUTPUT = ah3out.o
-
-CAPREOLE = capreole.o
-
-MPI = mpi.o
-
-NOMPI = no_mpi.o
-
-SIZES = sizes.o
-
-SCALING = scaling.o
-
-NOSCALING = noscaling.o
-
-ATOMIC = atomic.o
-
-ABUNDANCES = abundances.o
-
-MATHCONS = mathconstants.o
-
-CGSCONS = cgsconstants.o
-
-CGSASTROCONS = cgsastroconstants.o
-
-CGSPHOTOCONS = cgsphotoconstants.o
-
-CONSTANTS = $(MATHCONS) $(CGSCONS) $(CGSASTROCONS)
-
-COSMOPARMS = cosmoparms.o
-
-STRINGS = string.o
-
-NO_IONIC = no_ionic.o
 
 # RT-3D
 COOLING = cooling.o
@@ -123,30 +176,29 @@ RT-3D-PP = $(RT-3D_BASIC) sourceprops_pp.o ionic_pp.o
 RT-3D-PP_ME = $(RT-3D_BASIC_ME) sourceprops_pp.o ionic_pp.o
 RT-3D-PP-NA = sourceprops_pp.o rad_evolve_planeparallel_noav.o $(RT-3D_BASIC)
 
-.f90.o:
-	$(F90) -c $(OPTIONS) $<
+# amuse -------------------------------------------------------------------
 
-.F90.o:
-	$(F90) -c $(OPTIONS) $<
+cart-amuse: F90=$(FC)
+cart-amuse: F90FLAGS = $(F90FLAGS1)
+cart-amuse : precision.o file_admin.o string.o sizes.o noscaling.o $(CONSTANTS) abundances.o atomic.o no_mpi.o clocks.o mesh.o cart-coords.o hydro.o time.o cart-routines.o $(PROT) boundary.o $(LOF) $(ROESOL) no_ionic.o cart-amuse.o integrate-strang.o  ah3out.o evolve.o capreole.o
+	$(F90) $(OPTIONS) -o $@ file_admin.o string.o no_mpi.o clocks.o mesh.o cart-coords.o hydro.o time.o cart-routines.o $(PROT) boundary.o $(LOF) $(ROESOL) no_ionic.o cart-amuse.o integrate-strang.o ah3out.o evolve.o capreole.o $(LIBS)
 
-#.F90.f90:
-#	$(PP) $< $*.f90
+mpi_cart-amuse: F90=$(MPIFC)
+mpi_cart-amuse: F90FLAGS = $(F90FLAGS1) $(MPI_FLAGS)
+mpi_cart-amuse : precision.o file_admin.o string.o sizes.o noscaling.o $(CONSTANTS) abundances.o atomic.o mpi.o clocks.o mesh.o cart-coords.o hydro.o time.o cart-routines.o $(PROT) boundary.o $(LOF) $(ROESOL) no_ionic.o cart-amuse.o integrate-strang.o  ah3out.o evolve.o capreole.o
+	$(F90) $(OPTIONS) -o $@ file_admin.o string.o mpi.o clocks.o mesh.o cart-coords.o hydro.o time.o cart-routines.o $(PROT) boundary.o $(LOF) $(ROESOL) no_ionic.o cart-amuse.o integrate-strang.o ah3out.o evolve.o capreole.o $(LIBS)
 
-.f.mod:
-	$(F90) -c $(OPTIONS) $<
+# ellipseclump------------------------------------------------------------------
 
-.SUFFIXES: .f90 .F90 .mod .o
+cart-ellipseclump : F90=$(FC)
+cart-ellipseclump : F90FLAGS = $(F90FLAGS1)
+cart-ellipseclump : precision.o file_admin.o string.o sizes.o noscaling.o $(CONSTANTS) abundances.o atomic.o no_mpi.o clocks.o mesh.o cart-coords.o hydro.o time.o cart-routines.o $(PROT) boundary.o $(LOF) $(ROESOL) no_ionic.o cart-ellipseclump.o integrate-strang.o  ah3out.o evolve.o capreole.o
+	$(F90) $(OPTIONS) -o $@ file_admin.o string.o no_mpi.o clocks.o mesh.o cart-coords.o hydro.o time.o cart-routines.o $(PROT) boundary.o $(LOF) $(ROESOL) no_ionic.o cart-ellipseclump.o integrate-strang.o ah3out.o evolve.o capreole.o $(LIBS)
 
-# ISW-------------------------------------------------------------------
-
-cart-amuse : $(PRECISION) $(FILES) $(STRINGS) $(SIZES) $(NOSCALING) $(CONSTANTS) $(ABUNDANCES) $(ATOMIC) $(NOMPI) $(MESH) $(CART-COORDS) $(HYDRO) $(TIME) $(CART-ROUTINES) $(PROT) $(BOUNDARY) $(LOF) $(ROESOL) $(NO_IONIC) $(CART-AMUSE) $(INTEGRATE)  $(OUTPUT) $(EVOLVE) $(CAPREOLE) 
-	$(F90) $(OPTIONS) -o $@ $(FILES) $(STRINGS) $(NOMPI) $(MESH) $(CART-COORDS) $(HYDRO) $(TIME) $(CART-ROUTINES) $(PROT) $(BOUNDARY) $(LOF) $(ROESOL) $(NO_IONIC) $(CART-AMUSE) $(INTEGRATE) $(OUTPUT) $(EVOLVE) $(CAPREOLE) $(LIBS)
-
-cart-ellipseclump : $(PRECISION) $(FILES) $(STRINGS) $(SIZES) $(SCALING) $(CONSTANTS) $(ABUNDANCES) $(ATOMIC) $(NOMPI) $(MESH) $(CART-COORDS) $(HYDRO) $(TIME) $(CART-ROUTINES) $(PROT) $(BOUNDARY) $(LOF) $(ROESOL) $(NO_IONIC) $(CART-ELLIPSECLUMP) $(INTEGRATE)  $(OUTPUT) $(EVOLVE) $(CAPREOLE) 
-	$(F90) $(OPTIONS) -o $@ $(STRINGS) $(NOMPI) $(MESH) $(CART-COORDS) $(HYDRO) $(TIME) $(CART-ROUTINES) $(PROT) $(BOUNDARY) $(LOF) $(ROESOL) $(NO_IONIC) $(CART-ELLIPSECLUMP) $(INTEGRATE) $(OUTPUT) $(EVOLVE) $(CAPREOLE) $(LIBS)
-
-mpi_cart-ellipseclump : $(PRECISION) $(FILES) $(STRINGS) $(SIZES) $(SCALING) $(CONSTANTS) $(ABUNDANCES) $(ATOMIC) $(MPI) $(MESH) $(CART-COORDS) $(HYDRO) $(TIME) $(CART-ROUTINES) $(PROT) $(BOUNDARY) $(LOF) $(ROESOL) $(NO_IONIC) $(CART-ELLIPSECLUMP) $(INTEGRATE) $(OUTPUT) $(EVOLVE) $(CAPREOLE) 
-	$(F90) $(OPTIONS) -o $@ $(MPI) $(STRINGS) $(MESH) $(CART-COORDS) $(HYDRO) $(TIME) $(CART-ROUTINES) $(PROT) $(BOUNDARY) $(LOF) $(ROESOL) $(NO_IONIC) $(CART-ELLIPSECLUMP) $(INTEGRATE)  $(OUTPUT) $(EVOLVE) $(CAPREOLE) $(LIBS)
+mpi_cart-ellipseclump : F90=$(MPIFC)
+mpi_cart-ellipseclump : F90FLAGS = $(F90FLAGS1) $(MPI_FLAGS)
+mpi_cart-ellipseclump : precision.o file_admin.o string.o sizes.o noscaling.o $(CONSTANTS) abundances.o atomic.o mpi.o clocks.o mesh.o cart-coords.o hydro.o time.o cart-routines.o $(PROT) boundary.o $(LOF) $(ROESOL) no_ionic.o cart-ellipseclump.o integrate-strang.o  ah3out.o evolve.o capreole.o
+	$(F90) $(OPTIONS) -o $@ file_admin.o string.o mpi.o clocks.o mesh.o cart-coords.o hydro.o time.o cart-routines.o $(PROT) boundary.o $(LOF) $(ROESOL) no_ionic.o cart-ellipseclump.o integrate-strang.o ah3out.o evolve.o capreole.o $(LIBS)
 
 cart-ellipseclump_hc_c2ray : $(PRECISION) $(FILES) $(STRINGS) $(SIZES) $(SCALING) $(CONSTANTS) $(CGSPHOTOCONS) $(ABUNDANCES) $(ATOMIC) $(NOMPI) $(MESH) $(CART-COORDS) $(HYDRO) $(HCOOLING) $(RT-3D-PP) $(TIME) $(CART-ROUTINES) $(PROT) $(BOUNDARY) $(LOF) $(ROESOL) $(CART-ELLIPSECLUMP) $(INTEGRATE)  $(OUTPUT) $(EVOLVE) $(CAPREOLE) 
 	$(F90) $(OPTIONS) -o $@ $(STRINGS) $(NOMPI) $(MESH) $(CART-COORDS) $(HYDRO) $(TIME) $(CART-ROUTINES) $(HCOOLING) $(RT-3D-PP) $(PROT) $(BOUNDARY) $(LOF) $(ROESOL) $(CART-ELLIPSECLUMP) $(INTEGRATE) $(OUTPUT) $(EVOLVE) $(CAPREOLE) $(LIBS)
@@ -213,5 +265,21 @@ cart-ellipseclump_vlfvs : $(PRECISION) $(FILES) $(STRINGS) $(SIZES) $(SCALING) $
 
 clean:
 	rm -f *.o *.mod *.l *.il *.vo
+
+.f.o:
+	$(F90) -c $(OPTIONS) $<
+
+.f90.o:
+	$(F90) -c $(OPTIONS) $<
+
+.F90.o:
+	$(F90) -c $(OPTIONS) $<
+
+f.mod:
+	$(F90) -c $(OPTIONS) $<
+
+.SUFFIXES: .f90 .F90 .mod .o
+
+
 
 
