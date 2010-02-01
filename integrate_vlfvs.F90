@@ -15,9 +15,10 @@ module integrator
   use atomic, only: gamma,gamma1
   use hydro, only: state,stnew,stold,NEW,OLD,pressr
   use times, only: dt
-  use problem, only: inflow
+  use problem, only: ,domainboundaryconditions, &
+       problemboundary
   use protection, only: presprot
-  use boundary, only: exchngxy
+  use boundary, only: boundaries
   use ionic, only: rad_evolve3d
 
   implicit none
@@ -92,7 +93,7 @@ contains
 
        ! exchange boundaries with neighbours
        ! This routine also calculates the new pressure
-       call exchngxy(NEW)
+       call boundaries(NEW,domainboundaryconditions,problemboundary)
        ! Protect against negative pressures
        call presprot(inegative,2,NEW)
        
@@ -150,12 +151,9 @@ contains
           enddo
        enddo
        
-       ! set the inflow condition
-       ! the inflow routine has to be supplied
-       call inflow(NEW) 
        ! exchange boundaries with neighbours
        ! This routine also calculates the new pressure
-       call exchngxy(NEW)
+       call boundaries(NEW,domainboundaryconditions,problemboundary)
        ! Protect against negative pressures
        call presprot(inegative,2,NEW)
        istop2=inegative
@@ -175,7 +173,7 @@ contains
        call rad_evolve3D(dt)
        ! exchange boundaries with neighbours
        ! This routine also calculates the new pressure
-       call exchngxy(NEW)
+       call boundaries(NEW,domainboundaryconditions,problemboundary)
     endif
     
   end subroutine integrate

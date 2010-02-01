@@ -30,9 +30,11 @@ module problem
   use tped, only: n2rho,rho2n,pressr2temper,temper2pressr
   use protection, only: presprot
   use geometry, only: presfunc
-  use boundary, only: exchngxy
+  use boundary, only: boundaries
 
   implicit none
+
+  integer, dimension(nrofDim,2) :: domainboundaryconditions
 
 contains
 
@@ -49,6 +51,9 @@ contains
     real(kind=dp) :: r_interface ! dummy needed for calling init_ionic
     integer :: ierror
 
+    ! Set domain boundary conditions
+    domainboundaryconditions(:,:)=OUTFLOW
+
     if (.not.restart) then ! Fresh start
 
        call fresh_start_state( )
@@ -61,7 +66,7 @@ contains
        state(:,:,:,RHVY)=state(:,:,:,RHVY)/scmome
        state(:,:,:,RHVZ)=state(:,:,:,RHVZ)/scmome
        state(:,:,:,EN)=state(:,:,:,EN)/scener
-       call exchngxy(OLD)
+       call boundaries(OLD,domainboundaryconditions,problemboundary)
 
     endif
        
@@ -126,11 +131,12 @@ contains
 
   !==========================================================================
 
-  subroutine inflow (newold)
+  subroutine problemboundary (boundary_id,newold)
     
     ! This routine resets the inner boundary to the inflow condition
     ! Dummy version
 
+    integer,intent(in) :: boundary_id
     integer,intent(in) :: newold
 
   end subroutine inflow

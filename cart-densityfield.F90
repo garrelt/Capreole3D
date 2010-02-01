@@ -25,11 +25,14 @@ module problem
   use mesh, only: sx,ex,sy,ey,sz,ez,meshx,meshy,meshz
   !use grid  
   use hydro, only: state,pressr,set_state_pointer,NEW,OLD,restart_state
-  use boundary, only: exchngxy
+  use boundary, only: boundaries,REFLECTIVE,OUTFLOW,PROBLEM_DEF,X_IN,X_OUT,Y_IN, &
+       Y_OUT,Z_IN,Z_OUT
   use ionic, only: init_ionic
   use tped
 
   implicit none
+
+  integer, dimension(nrofDim,2) :: domainboundaryconditions
 
 contains
 
@@ -46,6 +49,9 @@ contains
     real(kind=dp) :: r_interface ! dummy needed for calling init_ionic
     integer :: ierror
 
+    ! Set domain boundary conditions
+    domainboundaryconditions(:,:)=OUTFLOW
+
     if (.not.restart) then ! Fresh start
 
        call fresh_start_state( )
@@ -58,7 +64,7 @@ contains
        state(:,:,:,RHVY)=state(:,:,:,RHVY)/scmome
        state(:,:,:,RHVZ)=state(:,:,:,RHVZ)/scmome
        state(:,:,:,EN)=state(:,:,:,EN)/scener
-       call exchngxy(OLD)
+       call boundaries(OLD,domainboundaryconditions,problemboundary) ! Fill boundary conditions
 
     endif
        
@@ -298,12 +304,13 @@ contains
   
   !==========================================================================
 
-  subroutine inflow (newold)
+  subroutine problemboundary (boundary_id,newold)
     
     ! This routine resets the inner boundary to the inflow condition
 
     ! Version: dummy routine
 
+    integer,intent(in) :: boundary_id
     integer,intent(in) :: newold
     
   end subroutine inflow

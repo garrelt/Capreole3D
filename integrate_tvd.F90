@@ -14,10 +14,11 @@ module integrator
   use grid, only: dx,dy,dz,vol,volx
   use hydro, only: stnew,stold,NEW,OLD,state1,state2,state,pressr
   use times, only: dt
-  use problem, only: inflow,apply_grav_force
+  use problem, only: apply_grav_force,domainboundaryconditions, &
+       problemboundary
   use protection, only: presprot
   !use oddeven, only: odd_even
-  use boundary, only: exchngxy
+  use boundary, only: boundaries
   use hydrosolver, only: solver,state1d,wp,dstate,constr_solver,destr_solver
   use ionic, only: rad_evolve3d
 
@@ -59,7 +60,7 @@ contains
     call apply_grav_force(0.5*dt,OLD)
     ! exchange boundaries with neighbours
     ! This routine also calculates the new pressure
-    call exchngxy(OLD)
+    call boundaries(OLD,domainboundaryconditions,problemboundary)
 
     ! Take one time step Strang splitting
     ! Alternate the order between time steps
@@ -109,14 +110,14 @@ contains
 
           ! exchange boundaries with neighbours
           ! This routine also calculates the new pressure
-          call exchngxy(NEW)
+          call boundaries(NEW,domainboundaryconditions,problemboundary)
 
           ! Odd-even fix
           !call odd_even(NEW,-1)
 
           ! exchange boundaries with neighbours
           ! This routine also calculates the new pressure
-          !call exchngxy(NEW)
+          !call boundaries(NEW,domainboundaryconditions,problemboundary)
 
           ! Protect against negative pressures
           !pressr(20,20,20)=-0.01*pressr(20,20,20)
@@ -130,7 +131,7 @@ contains
 
           ! exchange boundaries with neighbours
           ! This routine also calculates the new pressure
-          call exchngxy(NEW)
+          call boundaries(NEW,domainboundaryconditions,problemboundary)
 
           ! Copy new state to old state
           ! This is now done by pointing stnew and stold
@@ -156,7 +157,7 @@ contains
     call apply_grav_force(0.5*dt,OLD)
     ! exchange boundaries with neighbours
     ! This routine also calculates the new pressure
-    call exchngxy(OLD)
+    call boundaries(OLD,domainboundaryconditions,problemboundary)
 
     if (istop == 0) then ! otherwise serious error occurred
        ! Point generic state array to stold (the newest at this point)
@@ -167,7 +168,7 @@ contains
        call rad_evolve3D(dt)
        ! exchange boundaries with neighbours
        ! This routine also calculates the new pressure
-       call exchngxy(OLD)
+       call boundaries(OLD,domainboundaryconditions,problemboundary)
     endif
 
   end subroutine integrate

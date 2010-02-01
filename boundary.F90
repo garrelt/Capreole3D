@@ -23,6 +23,7 @@ module boundary
 
   ! Define outflow types
   integer,parameter,public :: REFLECTIVE=-1
+  integer,parameter,public :: REFLECTIVE_SHIFT=-2
   integer,parameter,public :: OUTFLOW=1
   integer,parameter,public :: PROBLEM_DEF=2
   integer,parameter,public :: X_IN=1
@@ -32,15 +33,18 @@ module boundary
   integer,parameter,public :: Z_IN=5
   integer,parameter,public :: Z_OUT=6
 
-  public :: exchngxy 
+  public :: boundaries
 
 contains
 
   !=======================================================================
 
-  subroutine exchngxy (newold,domainboundaryconditions,problem_boundary_routine)
+  subroutine boundaries (newold, &
+       domainboundaryconditions, &
+       problem_boundary_routine)
     
-    ! This routine exchanges boundary cells between neighbours
+    ! Deals with the boundary conditions: internal boundaries (exchanges 
+    ! boundary cells between neighbours) and external boundaries.
     ! extend of boundary: mbc
 
     integer,intent(in) :: newold
@@ -315,7 +319,7 @@ contains
     !! call presfunc(sx-1,ex+1,sy-mbc,sy-1,0)
     !! call presfunc(sx-1,ex+1,ey+1,ey+mbc,0)
 
-  end subroutine exchngxy
+  end subroutine boundaries
 
   !==========================================================================
 
@@ -345,6 +349,16 @@ contains
                 state(i,j,k,RHO)=state(2*sx-1-i,j,k,RHO)
                 state(i,j,k,RHVX)=-state(2*sx-1-i,j,k,RHVX)
                 state(i,j,k,RHVY:neq)=state(2*sx-1-i,j,k,RHVY:neq)
+             enddo
+          enddo
+       enddo
+    case (REFLECTIVE_SHIFT)
+       do k=sz-mbc,ez+mbc
+          do j=sy-mbc,ey+mbc
+             do i=sx-mbc,sx-1
+                state(i,j,k,RHO)=state(2*sx-i,j,k,RHO)
+                state(i,j,k,RHVX)=-state(2*sx-i,j,k,RHVX)
+                state(i,j,k,RHVY:neq)=state(2*sx-i,j,k,RHVY:neq)
              enddo
           enddo
        enddo
@@ -392,6 +406,16 @@ contains
                 state(i,j,k,RHO)=state(2*ex+1-i,j,k,RHO)
                 state(i,j,k,RHVX)=-state(2*ex+1-i,j,k,RHVX)
                 state(i,j,k,RHVY:neq)=state(2*ex+1-i,j,k,RHVY:neq)
+             enddo
+          enddo
+       enddo
+    case (REFLECTIVE_SHIFT)
+       do k=sz-mbc,ez+mbc
+          do j=sy-mbc,ey+mbc
+             do i=ex+1,ex+mbc
+                state(i,j,k,RHO)=state(2*ex-i,j,k,RHO)
+                state(i,j,k,RHVX)=-state(2*ex-i,j,k,RHVX)
+                state(i,j,k,RHVY:neq)=state(2*ex-i,j,k,RHVY:neq)
              enddo
           enddo
        enddo
@@ -443,6 +467,17 @@ contains
              enddo
           enddo
        enddo
+    case (REFLECTIVE_SHIFT)
+       do k=sz-mbc,ez+mbc
+          do j=sy-mbc,sy-1
+             do i=sx-mbc,ex+mbc
+                state(i,j,k,RHO)=state(i,2*sy-j,k,RHO)
+                state(i,j,k,RHVX)=state(i,2*sy-j,k,RHVX)
+                state(i,j,k,RHVY)=-state(i,2*sy-j,k,RHVY)
+                state(i,j,k,RHVZ:neq)=state(i,2*sy-j,k,RHVZ:neq)
+             enddo
+          enddo
+       enddo
     case(OUTFLOW)
        do ieq=1,neq
           do k=sz-mbc,ez+mbc
@@ -488,6 +523,17 @@ contains
                 state(i,j,k,RHVX)=state(i,2*ey+1-j,k,RHVX)
                 state(i,j,k,RHVY)=-state(i,2*ey+1-j,k,RHVY)
                 state(i,j,k,RHVZ:neq)=state(i,2*ey+1-j,k,RHVZ:neq)
+             enddo
+          enddo
+       enddo
+    case (REFLECTIVE_SHIFT)
+       do k=sz-mbc,ez+mbc
+          do j=ey+1,ey+mbc
+             do i=sx-mbc,ex+mbc
+                state(i,j,k,RHO)=state(i,2*ey-j,k,RHO)
+                state(i,j,k,RHVX)=state(i,2*ey-j,k,RHVX)
+                state(i,j,k,RHVY)=-state(i,2*ey-j,k,RHVY)
+                state(i,j,k,RHVZ:neq)=state(i,2*ey-j,k,RHVZ:neq)
              enddo
           enddo
        enddo
@@ -540,6 +586,18 @@ contains
              enddo
           enddo
        enddo
+    case (REFLECTIVE_SHIFT)
+       do k=sz-mbc,sz-1
+          do j=sy-mbc,ey+mbc
+             do i=sx-mbc,ex+mbc
+                state(i,j,k,RHO)=state(i,j,2*sz-k,RHO)
+                state(i,j,k,RHVX)=state(i,j,2*sz-k,RHVX)
+                state(i,j,k,RHVY)=state(i,j,2*sz-k,RHVY)
+                state(i,j,k,RHVZ)=-state(i,j,2*sz-k,RHVZ)
+                state(i,j,k,EN:neq)=state(i,j,2*sz-k,EN:neq)
+             enddo
+          enddo
+       enddo
     case(OUTFLOW)
        do ieq=1,neq
           do k=sz-mbc,sz-1
@@ -586,6 +644,18 @@ contains
                 state(i,j,k,RHVY)=state(i,j,2*ez+1-k,RHVY)
                 state(i,j,k,RHVZ)=-state(i,j,2*ez+1-k,RHVZ)
                 state(i,j,k,EN:neq)=state(i,j,2*ez+1-k,EN:neq)
+             enddo
+          enddo
+       enddo
+    case (REFLECTIVE_SHIFT)
+       do k=ez+1,ez+mbc
+          do j=sy-mbc,ey+mbc
+             do i=sx-mbc,ex+mbc
+                state(i,j,k,RHO)=state(i,j,2*ez-k,RHO)
+                state(i,j,k,RHVX)=state(i,j,2*ez-k,RHVX)
+                state(i,j,k,RHVY)=state(i,j,2*ez-k,RHVY)
+                state(i,j,k,RHVZ)=-state(i,j,2*ez-k,RHVZ)
+                state(i,j,k,EN:neq)=state(i,j,2*ez-k,EN:neq)
              enddo
           enddo
        enddo

@@ -30,7 +30,7 @@ module problem
   use mesh, only: sx,ex,sy,ey,sz,ez,meshx,meshy,meshz
   use grid, only: x,y,z,dx,dy,dz
   use hydro, only: state,pressr,set_state_pointer,NEW,OLD,stnew,tmpstate,restart_state
-  use boundary, only: exchngxy,REFLECTIVE,OUTFLOW,PROBLEM_DEF,X_IN,X_OUT,Y_IN, &
+  use boundary, only: boundaries,REFLECTIVE,OUTFLOW,PROBLEM_DEF,X_IN,X_OUT,Y_IN, &
        Y_OUT,Z_IN,Z_OUT
   use ionic, only: init_ionic
 
@@ -79,7 +79,7 @@ contains
        state(:,:,:,RHVZ)=state(:,:,:,RHVZ)/scmome
        state(:,:,:,EN)=state(:,:,:,EN)/scener
 
-       call exchngxy(OLD,domainboundaryconditions,problemboundary) ! Fill boundary conditions
+       call boundaries(OLD,domainboundaryconditions,problemboundary) ! Fill boundary conditions
 
     endif
        
@@ -381,7 +381,7 @@ contains
           ! In order for the grid boundaries to be consistent, we need
           ! to reset them after each smoothing loop.
           ! exchange boundaries with neighbours
-       call exchngxy(OLD,domainboundaryconditions,problemboundary) ! Fill boundary conditions
+       call boundaries(OLD,domainboundaryconditions,problemboundary) ! Fill boundary conditions
        enddo
     endif
     

@@ -30,7 +30,7 @@ module problem
   use mesh, only: sx,ex,sy,ey,sz,ez,meshx,meshy,meshz
   use grid, only: xlength,ylength,zlength,x,y,z
   use hydro, only: state,pressr,set_state_pointer,NEW,OLD,restart_state
-  use boundary, only: exchngxy,REFLECTIVE,OUTFLOW,PROBLEM_DEF,X_IN,X_OUT,Y_IN, &
+  use boundary, only: boundaries,REFLECTIVE,OUTFLOW,PROBLEM_DEF,X_IN,X_OUT,Y_IN, &
        Y_OUT,Z_IN,Z_OUT
   use ionic, only: init_ionic
 
@@ -82,7 +82,7 @@ contains
        state(:,:,:,RHVZ)=state(:,:,:,RHVZ)/scmome
        state(:,:,:,EN)=state(:,:,:,EN)/scener
 
-       call exchngxy(OLD,domainboundaryconditions,problemboundary) ! Fill boundary conditions
+       call boundaries(OLD,domainboundaryconditions,problemboundary) ! Fill boundary conditions
 
     endif
        
@@ -181,13 +181,13 @@ contains
   
   !==========================================================================
 
-  subroutine problemboundary (boundary,newold)
+  subroutine problemboundary (boundary_id,newold)
     
     ! This routine resets the inner boundary to the inflow condition
 
     ! Version: dummy routine
 
-    integer,intent(in) :: boundary
+    integer,intent(in) :: boundary_id
     integer,intent(in) :: newold
     
     integer :: i,j,k
@@ -195,7 +195,7 @@ contains
     ! Point state to appropriate array
     state => set_state_pointer(newold)
 
-    select case (boundary)
+    select case (boundary_id)
     case (X_IN)
        do k=sz-1,ez+1
           do j=sy-1,ey+1
