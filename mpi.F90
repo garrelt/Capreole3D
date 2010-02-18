@@ -1,3 +1,17 @@
+!>
+!! \Brief This module contains data and routines for MPI parallelization
+!!
+!! Module for C2Ray / Capreole (3D)
+!!
+!! \b Author: Garrelt Mellema
+!!
+!! \b Date: 2008-06-01
+!!
+!! \b Version: True MPI (no dummy). Also reports on OpenMP parallelization.
+!! Log files for nodes 1 and higher are called 'log.n', so node 0 it is
+!! 'Capreole.log'.
+!! This module is also accepted by the F compiler (Dec 9, 2003)\n
+
 module my_mpi
 
   ! Module for Capreole (3D)
@@ -11,9 +25,14 @@ module my_mpi
   ! mpi_end:      close down the MPI interface
   ! fnd3dnbrs:    find neighbours in 3D domain decomposition
   
-  ! Each processor has its own log file, which is called log.0, log.1,
-  ! etc. This is opened in mpi_setup, and is connected to unit log_unit.
-  ! The file is close in mpi_end
+
+  ! rank 0 has a log file called Capreole.log associated with it. If
+  ! the log unit is equal to 6, no file is opened and all log output
+  ! is sent to standard output.
+  ! The other MPI processes get their own log files, called log.1, log.2, etc.
+  ! All these files are opened in mpi_setup and closed in mpi_end.
+  ! Note: for very large numbers of MPI processes this is cumbersome. The
+  ! log I/O should be changed for that.
 
   ! This is the system module:
   !use mpi
@@ -31,20 +50,18 @@ module my_mpi
 
   include 'mpif.h'
 
-  integer,parameter,public :: NPDIM=3 ! dimension of problem
+  integer,parameter,public :: NPDIM=3 !< dimension of problem
 
-  integer,public :: rank            ! rank of the processor
-  integer,public :: npr             ! number of processors
-  integer,public :: MPI_COMM_NEW    ! the (new) communicator
+  integer,public :: rank            !< rank of the processor
+  integer,public :: npr             !< number of processors
+  integer,public :: MPI_COMM_NEW    !< the (new) communicator
 
-  integer,dimension(NPDIM),public :: dims ! number of processors in 
-                                             !  each dimension
-  integer,dimension(NPDIM),public :: grid_struct ! coordinates of 
-                                               !the processors in the grid
+  integer,dimension(NPDIM),public :: dims !< number of processors in each dimension
+  integer,dimension(NPDIM),public :: grid_struct !< coordinates of the processors in the grid
   
-  integer,public ::  nbrleft,nbrright  ! left and right neighbours
-  integer,public ::  nbrdown,nbrup     ! up and down neighbours 
-  integer,public ::  nbrabove,nbrbelow ! above and below neighbours 
+  integer,public ::  nbrleft,nbrright  !< left and right neighbours
+  integer,public ::  nbrdown,nbrup     !< up and down neighbours 
+  integer,public ::  nbrabove,nbrbelow !< above and below neighbours 
 
   public :: mpi_setup,mpi_end
   private :: mpi_basic,mpi_topology,fnd3dnbrs

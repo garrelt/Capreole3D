@@ -1,48 +1,53 @@
+!>
+!! \brief This module contains data and routines for MPI parallelization
+!!
+!! Module for C2Ray / Capreole (3D)
+!!
+!! \b Author: Garrelt Mellema
+!!
+!! \b Date: 2003-06-01
+!!
+!! \b Version: This is a dummy module for systems where there is no MPI for F90.
+!!
+!! This module is also accepted by the F compiler (Dec 9, 2003)\n
+
 module my_mpi
 
-  ! Module for Capreole (3D)
-  ! Author: Garrelt Mellema
-  ! Date: 2003-06-01
-  ! This module is also accepted by the F compiler (Nov 29, 2007)
-  ! !!!Apart from the hostnm call!!!
- 
-  ! This is a dummy module for systems where there is no MPI
-  ! for F90.
-  !
-  !----------------------------------------------------------------------------
-  
+  use file_admin, only: log_unit, results_dir
+
 #ifdef XLF
   USE XLFUTILITY, only: hostnm => hostnm_ , flush => flush_
 #endif
 
 #ifdef IFORT
   USE IFPORT, only: hostnm, flush
-#endif
-
-#if defined IFORT && defined OPENMP 
+#ifdef _OPENMP
   USE OMP_LIB, only: omp_get_num_threads, omp_get_thread_num
 #endif
-  use file_admin, only: log_unit
+#endif
 
   implicit none
 
-  integer,parameter,public :: NPDIM=3 ! dimension of problem
+  integer,parameter,public :: NPDIM=3 !< dimension of problem
 
   ! All of these are set to be consistent with the MPI version
-  integer,public :: rank              ! rank of the processor
-  integer,public :: npr               ! number of processors
-  integer,public :: nthreads        ! number of threads (per processor)
-  integer,public :: MPI_COMM_NEW      ! the (new) communicator (dummy)
-  integer,dimension(NPDIM),public :: dims ! number of processors in  
-                                             !  each dimension (dummy)
-  integer,dimension(NPDIM),public :: grid_struct ! coordinates of 
-                                               !the processors in the grid
-                                               ! (dummy)
-  integer,public ::  nbrleft,nbrright ! left and right neighbours
-  integer,public ::  nbrdown,nbrup    ! up and down neighbours 
-  integer,public ::  nbrabove,nbrbelow        ! above and below neighbours 
+  integer,public :: rank              !< rank of the processor
+  integer,public :: npr               !<< number of processors
+  integer,public :: nthreads        !< number of threads (per processor)
+  integer,public :: MPI_COMM_NEW      !< the (new) communicator (dummy)
+
+  integer,dimension(NPDIM),public :: dims !< number of processors in each dimension (dummy)
+  integer,dimension(NPDIM),public :: grid_struct !< coordinates of the processors in the grid (dummy)
+
+  integer,public ::  nbrleft,nbrright  !< left and right neighbours
+  integer,public ::  nbrdown,nbrup     !< up and down neighbours 
+  integer,public ::  nbrabove,nbrbelow !< above and below neighbours 
 
   integer,parameter,public :: MPI_PROC_NULL=-1
+
+#ifdef SUN
+  integer :: hostnm
+#endif
 
   public :: mpi_setup,mpi_end
   private :: mpi_basic,mpi_topology,fnd2dnbrs
@@ -53,55 +58,50 @@ contains
 
   subroutine mpi_setup ( )
 
-
-    character(len=10) :: filename        ! name of the log file
+    character(len=512) :: filename        ! name of the log file
     character(len=4) :: number
     integer :: ierror
     integer :: tn
-    !integer :: hostnm
     character(len=100) :: hostname
 
     call mpi_basic ()
 
-    ! Open processor dependent log file
-    write(unit=number,fmt="(I4)") rank
-    filename=trim(adjustl("log."//trim(adjustl(number))))
-    open(unit=log_unit,file=filename,status="replace",action="write")
+    if (log_unit /= 6) then
+       filename=trim(adjustl(trim(adjustl(results_dir))//"Capreole.log"))
+       open(unit=log_unit,file=filename,status="unknown",action="write", &
+            position="append")
+    endif
+    write(unit=log_unit,fmt="(A)") "Log file for Capreole run"
 
-    write(unit=log_unit,fmt=*) "Log file for rank ",rank
+    nthreads=1
+    ! Figure out hostname
+    ! NOTE: compiler dependent!!!
+    ierror=hostnm(hostname)
+    if (ierror == 0) then
+       write(log_unit,*) "Running on processor named ",hostname
+    else 
+       write(log_unit,*) "Error establishing identity of processor."
+    endif
 
-#ifdef OPENMP
+    ! Report number of OpenMP threads
     !$omp parallel default(shared)
+#ifdef _OPENMP
     nthreads=omp_get_num_threads()
+#endif
     !$omp end parallel
-    write(unit=log_unit,fmt=*) " Number of OpenMP threads is ",nthreads
-
-    ! Figure out hostname
-    ! NOTE: compiler dependent!!!
-    !$omp parallel default(shared) private(tn,ierror,hostname)
-    tn=omp_get_thread_num()+1
-    ierror=hostnm(hostname)
-    if (ierror == 0) then
-       write(unit=log_unit,fmt=*) &
-            "Thread number ',tn,' running on Processor ",hostname
-    else 
-       write(unit=log_unit,fmt=*) &
-            "Error establishing identity of processor for thread ",tn
-    endif
-    !$omp end parallel
-#else
-    ! Figure out hostname
-    ! NOTE: compiler dependent!!!
-    ierror=hostnm(hostname)
-    if (ierror == 0) then
-       write(unit=log_unit,fmt=*) "The Processor is ",hostname
-    else 
-       write(unit=log_unit,fmt=*) &
-            "Error establishing identity of processor for this rank"
-    endif
+#ifdef _OPENMP
+    write(log_unit,*) ' Number of OpenMP threads is ',nthreads
 #endif
 
-    call flush(log_unit)
+    ! Let OpenMP threads report
+    !$omp parallel default(private)
+#ifdef _OPENMP
+    tn=omp_get_thread_num()+1
+    write(log_unit,*) 'Thread number ',tn,' reporting'
+#endif
+    !$omp end parallel
+
+    flush(log_unit)
 
     call mpi_topology ()
 
