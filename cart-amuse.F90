@@ -1,3 +1,17 @@
+!>
+!! \Brief This is the problem module. It contains the routines which define the problem being solved
+!!
+!! Module for Capreole (3D)
+!!
+!! \b Author: Garrelt Mellema
+!!
+!! \b Date: 2010-03-25
+!!
+!! \b Version: interface for AMUSE (cartesian coordinates). This is
+!!  now a 3D simplified Riemann problem: density & pressure are set in
+!!  two regions, an inner cube, half the size of the domain, and the
+!!  region outside of that.
+
 module problem
 
   ! Module for Capreole3D (F90)

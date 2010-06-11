@@ -414,11 +414,11 @@ contains
 
   !==========================================================================
 
-  subroutine problemboundary (boundary,newold)
+  subroutine problemboundary (boundary_id,newold)
     
     ! This routine resets the inner boundary to the inflow condition
     
-    integer,intent(in) :: boundary
+    integer,intent(in) :: boundary_id
     integer,intent(in) :: newold
 
     integer :: i,j,k
@@ -426,7 +426,7 @@ contains
     ! Point state to appropriate array
     state => set_state_pointer(newold)
 
-    select case (boundary)
+    select case (boundary_id)
     case (X_IN)
        if (sx == 1 .and. sevelocity > 0.0) then
           do k=sz-1,ez+1
