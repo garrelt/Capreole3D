@@ -49,11 +49,11 @@ module cgsphotoconstants
   real(kind=dp), parameter :: thigh=200000.0
   !> minimum T_eff for black body
   real(kind=dp), parameter :: tlow=2000.0
-  !real(kind=dp), parameter :: frtop1=700.0*tlow/47979.72484*1e15
 
   !> Upper limits for integrals: due to arithmetic precision,
   !!     exp(700) exceeds double precision limit
   real(kind=dp), parameter :: frtop1=700.0*tlow*kb/hplanck
+  !real(kind=dp), parameter :: frtop1=frthe1
   !> Upper limits for integrals: due to the form of the planck
   !!     curve: take 10 times the frequency of maximum intensity
   real(kind=dp), parameter :: frtop2=5.88e-05*thigh*1e15
